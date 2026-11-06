@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trellis</title>
+  <meta name="description" content="Trellis is an alt-mempool node for EIP-8141 frame transactions. It holds the transactions ERC-8421 has to reject: the ones valid later (PARK) and the ones valid right after (PRED).">
+  <meta name="theme-color" content="#f4f1ea">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script>document.documentElement.classList.replace('no-js', 'js');</script>
+</head>
+<body>
+
+<header class="nav" id="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="#top" aria-label="Trellis home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="M2 12 12 2l10 10-10 10z"/><path d="M7 7l10 10M17 7 7 17"/>
+      </svg>
+      <span>Trellis</span>
+    </a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="#problem">Why</a>
+      <a href="#park">PARK</a>
+      <a href="#pred">PRED</a>
+      <a href="#frames">Frames</a>
+      <a href="#rules">Rules</a>
+    </nav>
+    <!-- TODO(mansi): point at the public repo once it's up -->
+    <a class="btn" href="#" data-repo>GitHub <span class="arr">→</span></a>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============ HERO ============ -->
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="wrap">
+      <div class="intro">
+        <div class="eyebrow">EIP-8141 frame transactions <i></i> ERC-8421 alt mempool <i></i> ETHGlobal Mumbai</div>
+        <h1 id="hero-title">For transactions that aren’t valid <em>yet.</em></h1>
+        <div class="hero-row">
+        <p class="lede">The alt mempool asks one question: <b>is this valid against the head?</b> Two kinds of perfectly good transactions fail it. Trellis is a node that holds them: the ones that are <b>valid later</b>, and the ones that are <b>valid right after</b> another.</p>
+        <div class="cta">
+          <a class="btn solid" href="#park">See how it works <span class="arr">→</span></a>
+          <a class="btn" href="#rules">Read the rules</a>
+        </div>
+        </div>
+      </div>
+
+      <!-- Live-feeling loop. Without JS it shows its final state. -->
+      <div class="stage s1 s2 s3 s4 s5" id="stage" role="img" aria-label="Animation: a parked DLC cheque is promoted into a block when its latch flips, and a market maker's quote lands at index 0 with the dependent trade at index 1, while a stale trade is rejected.">
+        <div class="stage-head">
+          <span class="pulse"></span> trellis-node <span class="addr">· devnet 1337 · 2 park nodes</span>
+          <span class="height">block <b id="slot-num">1206</b></span>
+        </div>
+        <div class="lanes">
+          <div class="lane">
+            <div class="lane-label"><span class="tag park">PARK</span><span class="serif">valid later</span></div>
+            <div class="latch">latch · oracle event 7
+              <span class="latch-val"><span class="unset">UNSET</span><span class="set">SET · YES</span></span>
+            </div>
+            <ul class="chips">
+              <li class="chip win">CET_YES <span class="why">promoted</span></li>
+              <li class="chip lose">CET_NO <span class="why">evicted</span></li>
+              <li class="chip lose">CET_REFUND <span class="why">evicted</span></li>
+            </ul>
+            <p class="lane-cap" id="cap-park">Winner promoted with its signed bytes unchanged. Siblings evicted, nothing simulated.</p>
+          </div>
+          <div class="lane">
+            <div class="lane-label"><span class="tag pred">PRED</span><span class="serif">valid right after</span></div>
+            <ul class="chips pred-chips">
+              <li class="chip q">quote #42 <span class="why">· idx 0</span></li>
+              <li class="chip t">trade → #42 <span class="why">· idx 1</span></li>
+              <li class="chip stale">trade → #41 <span class="why">stale</span></li>
+            </ul>
+            <p class="lane-cap" id="cap-pred">A trade bound to quote #41 is stale. It's turned away at admission.</p>
+          </div>
+        </div>
+        <div class="chain-wrap" aria-hidden="true">
+          <div class="chain-label">Latest blocks →</div>
+          <div class="chain" id="chain">
+            <div class="block"><div class="block-n"><span>#1199</span></div><div class="tx" style="width:58%"></div><div class="tx" style="width:80%"></div></div>
+            <div class="block"><div class="block-n"><span>#1200</span></div><div class="tx" style="width:76%"></div><div class="tx" style="width:64%"></div><div class="tx" style="width:50%"></div></div>
+            <div class="block"><div class="block-n"><span>#1201</span></div><div class="tx" style="width:90%"></div><div class="tx" style="width:56%"></div></div>
+            <div class="block"><div class="block-n"><span>#1202</span></div><div class="tx" style="width:84%"></div><div class="tx" style="width:62%"></div><div class="tx" style="width:74%"></div></div>
+            <div class="block"><div class="block-n"><span>#1203</span></div><div class="tx" style="width:70%"></div><div class="tx" style="width:88%"></div></div>
+            <div class="block"><div class="block-n"><span>#1204</span></div><div class="tx" style="width:66%"></div><div class="tx" style="width:80%"></div><div class="tx" style="width:52%"></div></div>
+            <div class="block"><div class="block-n"><span>#1205</span></div><div class="tx park">CET_YES</div><div class="tx" style="width:72%"></div></div>
+            <div class="block"><div class="block-n"><span>#1206</span></div><div class="tx pred">0 · quote #42</div><div class="tx pred t">1 · trade → #42</div><div class="tx" style="width:60%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PROBLEM ============ -->
+  <section id="problem" aria-labelledby="problem-title">
+    <div class="wrap">
+      <div class="kicker reveal">The gap</div>
+      <h2 id="problem-title" class="reveal d1">The mempool only knows <em>now.</em></h2>
+      <p class="sub reveal d2">With EIP-8141, validity is programmable. An account can say exactly when it approves a transaction. But ERC-8421 checks every transaction against the current head and nothing else, so anything whose moment hasn't come yet gets turned away.</p>
+
+      <div class="three">
+        <article class="q-card reveal">
+          <div class="glyph" aria-hidden="true"><span class="g-now"></span></div>
+          <h3>Valid now</h3>
+          <p>An ordinary transfer or swap. It passes against the head, so the standard alt mempool admits and gossips it.</p>
+          <div class="verdict"><span>ERC-8421 · <b class="ok">admitted</b></span><span>Trellis · not needed</span></div>
+        </article>
+        <article class="q-card reveal d1">
+          <div class="glyph" aria-hidden="true"><span class="g-wait"></span><span class="g-line"></span><span class="g-latch"></span></div>
+          <h3>Valid later</h3>
+          <p>A DLC payout cheque that only works once an oracle attests. A rescue that only works once its owner goes quiet. Signed today, valid the moment a condition holds.</p>
+          <div class="verdict"><span>ERC-8421 · <b class="no">rejected</b></span><span>Trellis · <b class="park">PARK holds it</b></span></div>
+        </article>
+        <article class="q-card reveal d2">
+          <div class="glyph" aria-hidden="true"><span class="g-q"></span><span class="g-t"></span></div>
+          <h3>Valid right after</h3>
+          <p>A trade that's only valid right after a market maker's quote, in the same block. Before the quote it fails. One block later the quote is stale.</p>
+          <div class="verdict"><span>ERC-8421 · <b class="no">rejected</b></span><span>Trellis · <b class="pred">PRED pairs it</b></span></div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PARK ============ -->
+  <section id="park" aria-labelledby="park-title">
+    <div class="wrap">
+      <div class="kicker reveal"><span class="tag park">PARK</span> Valid later</div>
+      <h2 id="park-title" class="reveal d1">Sign it now. It lands when the <em>latch</em> flips.</h2>
+      <p class="sub reveal d2">A parked transaction names a write-once latch and the value it waits for. Trellis holds the signed bytes, watches the latch, and promotes the match the moment it flips.</p>
+
+      <div class="explain" data-explainer="park">
+        <div class="steps reveal">
+          <div class="tabs" role="tablist" aria-label="Example">
+            <button role="tab" aria-selected="true" data-mode="dlc">DLC cheque</button>
+            <button role="tab" aria-selected="false" data-mode="dead">Deadman rescue</button>
+          </div>
+          <ol>
+            <li><button data-step="1" class="active"><span class="t" data-dlc="Sign three cheques" data-dead="Pre-sign a rescue">Sign three cheques</span><span class="d" data-dlc="Alice and Bob sign YES, NO and REFUND payouts. All three share one nonce key, so only one can ever land." data-dead="You sign a transaction that pays your beneficiary. It's only valid once your latch expires.">Alice and Bob sign YES, NO and REFUND payouts. All three share one nonce key, so only one can ever land.</span></button></li>
+            <li><button data-step="2"><span class="t">Park on two nodes</span><span class="d">Two independent nodes admit the same bytes. The sender is staked, the account matches an allow-listed template, every signature checks out, and per-sender caps are live.</span></button></li>
+            <li><button data-step="3"><span class="t" data-dlc="The oracle attests" data-dead="You go quiet">The oracle attests</span><span class="d" data-dlc="The oracle attests YES. The latch is write-once, so it flips and can never flip back." data-dead="You ping the latch for months. Then you stop. After the interval plus a grace period, anyone can call expire.">The oracle attests YES. The latch is write-once, so it flips and can never flip back.</span></button></li>
+            <li><button data-step="4"><span class="t">Promote the match</span><span class="d" data-dlc="Each node looks up (latch, event, YES) and forwards the cheque exactly as it was signed. No keeper re-signs anything." data-dead="The latch reads EXPIRED. The node forwards your rescue exactly as you signed it.">Each node looks up (latch, event, YES) and forwards the cheque exactly as it was signed. No keeper re-signs anything.</span></button></li>
+            <li><button data-step="5"><span class="t" data-dlc="Evict the siblings" data-dead="The beneficiary is paid">Evict the siblings</span><span class="d" data-dlc="Once the winner lands, NO and REFUND can never be valid. They're dropped without a single simulation." data-dead="You weren't online, and no keeper chose who gets the funds. The parked bytes decided that when you signed them.">Once the winner lands, NO and REFUND can never be valid. They're dropped without a single simulation.</span></button></li>
+          </ol>
+          <div class="progress" aria-hidden="true"><i></i></div>
+        </div>
+
+        <div class="scene mode-dlc reveal d1" aria-live="polite">
+          <div>
+            <div class="row-label"><span>Signed</span><span class="dlc-only">nonce key 0x…a7 · seq 0</span><span class="dead-only">expires in 30 days</span></div>
+            <div class="chips" data-from="1">
+              <span class="chip dlc-only">CET_YES</span>
+              <span class="chip dlc-only mark marked" data-mark="5">CET_NO</span>
+              <span class="chip dlc-only mark marked" data-mark="5">CET_REFUND</span>
+              <span class="chip dead-only">RESCUE → beneficiary</span>
+            </div>
+          </div>
+          <div>
+            <div class="row-label"><span>Park nodes</span><span>no simulation</span></div>
+            <div class="nodes">
+              <div class="node ghost" data-from="2">
+                <div class="node-h"><span class="pulse"></span>node A</div>
+                <ul class="checks"><li>staked</li><li>template bound</li><li>signatures</li></ul>
+                <div class="held dlc-only"><i></i><i class="lose mark marked" data-mark="5"></i><i class="lose mark marked" data-mark="5"></i></div>
+                <div class="held dead-only"><i></i></div>
+              </div>
+              <div class="node ghost" data-from="2">
+                <div class="node-h"><span class="pulse"></span>node B</div>
+                <ul class="checks"><li>staked</li><li>template bound</li><li>signatures</li></ul>
+                <div class="held dlc-only"><i></i><i class="lose mark marked" data-mark="5"></i><i class="lose mark marked" data-mark="5"></i></div>
+                <div class="held dead-only"><i></i></div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="row-label"><span>Latch</span><span>write-once</span></div>
+            <div class="track dlc-only flipped" style="--n:3" data-flip="3"><i class="knob"></i><span>UNSET</span><span class="cur">YES</span><span>NO</span></div>
+            <div class="track dead-only flipped" style="--n:2" data-flip="3"><i class="knob"></i><span>UNSET · pinged</span><span class="cur">EXPIRED</span></div>
+          </div>
+          <div>
+            <div class="row-label"><span>Next block</span><span data-from="4">bytes unchanged</span></div>
+            <div class="blockbox on-land" data-land="4">
+              <div class="slot filler"><span class="ix">0</span><span class="bar"></span><span></span></div>
+              <div class="slot park" data-from="4"><span class="ix">1</span><span class="dlc-only">CET_YES → winner</span><span class="dead-only">RESCUE → beneficiary</span><span class="r">promoted</span></div>
+            </div>
+          </div>
+          <div class="payout dead-only" data-from="5"><span>beneficiary</span><span>+ 4.20 ETH</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PRED ============ -->
+  <section id="pred" aria-labelledby="pred-title">
+    <div class="wrap">
+      <div class="kicker reveal"><span class="tag pred">PRED</span> Valid right after</div>
+      <h2 id="pred-title" class="reveal d1">The quote runs first, <em>or the trade doesn’t run.</em></h2>
+      <p class="sub reveal d2">A trade names the pending quote it depends on. Its pay frame approves gas only if that quote already ran earlier in the same block, so a stale trade can't land at all and the pool never pays for one.</p>
+
+      <div class="explain flip" data-explainer="pred">
+        <div class="steps reveal">
+          <ol>
+            <li><button data-step="1" class="active"><span class="t">A maker quotes</span><span class="d">A market maker signs quote #42: a price and a size, good for one block.</span></button></li>
+            <li><button data-step="2"><span class="t">A trader binds to it</span><span class="d">The trader signs a trade bound to #42. Its pay frame approves gas only if quote #42 ran earlier in this same block.</span></button></li>
+            <li><button data-step="3"><span class="t">The node holds the pair</span><span class="d">ERC-8421 would reject the trade at the head. Trellis keeps it beside its quote and checks the size against the quote's own calldata. A trade bound to #41 is turned away.</span></button></li>
+            <li><button data-step="4"><span class="t">Forwarded together</span><span class="d">The node forwards both for the same block: the quote first, then the trade.</span></button></li>
+            <li><button data-step="5"><span class="t">One block, in order</span><span class="d">The quote sits at index 0 and the trade at index 1. A stale trade forced in anyway is invalid, so it gets no receipt and costs the pool nothing.</span></button></li>
+          </ol>
+          <div class="progress" aria-hidden="true"><i></i></div>
+        </div>
+
+        <div class="scene reveal d1" aria-live="polite">
+          <div>
+            <div class="row-label"><span>PRED node</span><span>caps per quote, per trader</span></div>
+            <div class="queue">
+              <div class="qitem q mark" data-from="1" data-sent="4"><span>quote #42 <small>· price 3,412 · size 5 ETH</small></span><small>maker</small></div>
+              <div class="qitem t mark" data-from="2" data-sent="4"><span>trade → #42 <small>· 1.2 ETH in</small></span><small>trader</small></div>
+              <div class="qitem bad mark marked" data-from="3" data-mark="3"><span>trade → #41 <small>· stale quote</small></span><small class="x">rejected</small></div>
+            </div>
+          </div>
+          <div class="arrow-down" aria-hidden="true"><svg viewBox="0 0 14 22" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7 1v19M2 15l5 5 5-5"/></svg></div>
+          <div>
+            <div class="row-label"><span>Block #1206</span><span data-from="5">same block · ordered</span></div>
+            <div class="blockbox on-land" data-land="5">
+              <div class="slot pred" data-from="5"><span class="ix">0</span><span>quote #42</span><span class="r">maker</span></div>
+              <div class="slot pred t" data-from="5"><span class="ix">1</span><span>trade → #42</span><span class="r">pool paid gas</span></div>
+              <div class="slot filler"><span class="ix">2</span><span class="bar"></span><span></span></div>
+            </div>
+          </div>
+          <div class="latch-note" data-from="5">trade → #41 · invalid in this block · no receipt · pool pays 0</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FRAMES ============ -->
+  <section id="frames" aria-labelledby="frames-title">
+    <div class="wrap">
+      <div class="kicker reveal">Under the hood</div>
+      <h2 id="frames-title" class="reveal d1">Just frames. <em>No new opcodes.</em></h2>
+      <p class="sub reveal d2">Both rules are node policy, not a consensus change. The condition lives in a VERIFY frame, so consensus enforces it and the node only has to decide when to forward.</p>
+
+      <div class="tabs frames-tabs reveal" role="tablist" aria-label="Transaction">
+        <button role="tab" aria-selected="true" data-frames="park">Parked cheque</button>
+        <button role="tab" aria-selected="false" data-frames="pred">Trade after a quote</button>
+      </div>
+      <div class="frames frame-set reveal" data-set="park">
+        <div class="frame"><span class="ix">frame 0</span><span class="mode verify">VERIFY</span><code>expiry_verify(deadline)</code><p>Every parked transaction expires, so nothing sits in a park area forever.</p></div>
+        <div class="frame"><span class="ix">frame 1</span><span class="mode verify">VERIFY</span><code>self_verify(latch, event, tag)</code><p>The signed trigger. The account reads the latch and approves only when it holds the expected tag.</p></div>
+        <div class="frame"><span class="ix">frame 2</span><span class="mode">SENDER</span><code>payout(winner)</code><p>The first payout, exactly as both parties signed it.</p></div>
+        <div class="frame"><span class="ix">frame 3</span><span class="mode">SENDER</span><code>payout(fee)</code><p>A second payout in the same transaction. No keeper rebuilds it.</p></div>
+      </div>
+      <div class="frames frame-set" data-set="pred" hidden>
+        <div class="frame"><span class="ix">frame 0</span><span class="mode verify">VERIFY</span><code>only_verify(trader)</code><p>The trader's own signature check. It approves execution, not payment.</p></div>
+        <div class="frame"><span class="ix">frame 1</span><span class="mode verify">VERIFY</span><code>validateTake(#42, in, minOut)</code><p>The pool's pay frame. It approves gas only if quote #42 ran in this block and the trade fits it.</p></div>
+        <div class="frame"><span class="ix">frame 2</span><span class="mode">SENDER</span><code>take(#42, minOut)</code><p>The swap itself. It re-checks the quote and that frame 1 succeeded.</p></div>
+        <div class="frame"><span class="optional">optional</span><span class="ix">frame 3</span><span class="mode verify">VERIFY</span><code>assertFilled()</code><p>Fails the whole transaction if the swap reverted, so the pool never pays for a failed body.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ RULES ============ -->
+  <section id="rules" aria-labelledby="rules-title">
+    <div class="wrap">
+      <div class="kicker reveal">The rules</div>
+      <h2 id="rules-title" class="reveal d1">Written as a spec <em>you can argue with.</em></h2>
+      <p class="sub reveal d2">Each rule is a node policy any ERC-8421 node can opt into. PARK-070 and the PRED topic are proposed as amendments.</p>
+
+      <div class="rules">
+        <div class="rulebook reveal">
+          <div class="rulebook-h"><span class="serif">PARK</span><span class="status"><i></i>built · tested</span></div>
+          <div class="rule"><code>PARK-010</code><span>The signed <b>self_verify</b> data declares the latch, the event and the expected tag.</span></div>
+          <div class="rule"><code>PARK-020</code><span>The sender is <b>staked</b>, so a foreign-state trigger read is allowed.</span></div>
+          <div class="rule"><code>PARK-030</code><span>The account is bound to an <b>allow-listed template</b>, and every signature is verified.</span></div>
+          <div class="rule"><code>PARK-040</code><span>Every parked transaction carries an <b>expiry</b> frame.</span></div>
+          <div class="rule"><code>PARK-050</code><span><b>Live caps</b> per sender and per trigger. Entry P+1 is rejected.</span></div>
+          <div class="rule"><code>PARK-060</code><span>Index by (latch, event, tag). Promote the match and <b>evict the losers</b> without simulation.</span></div>
+          <div class="rule"><code>PARK-070</code><span>The park area may hold <b>mutually exclusive siblings</b>. Only the promoted one goes live.</span></div>
+          <div class="rule"><code>PARK-080</code><span>Optional gossip. Peers revalidate on their own. Gossip leaks timing.</span></div>
+        </div>
+        <div class="rulebook reveal d1">
+          <div class="rulebook-h"><span class="serif">PRED</span><span class="status wip"><i></i>draft · building</span></div>
+          <div class="rule"><code>PRED-010</code><span>A trade names exactly <b>one pending quote</b>, checked against the quote's calldata with no simulation.</span></div>
+          <div class="rule"><code>PRED-020</code><span>Admitted trades can't exceed the quote's <b>size</b>. Caps per quote and per trader, plus a minimum trade.</span></div>
+          <div class="rule"><code>PRED-030</code><span>One quote per maker per block. A <b>newer sequence</b> evicts trades bound to older ones.</span></div>
+          <div class="rule"><code>PRED-040</code><span>Forward the quote only <b>with</b> its trades, aimed at one block. Drop whatever misses it.</span></div>
+          <div class="rule"><code>PRED-050</code><span><b>Reputation</b> for makers whose quotes don't land and traders whose trades go invalid.</span></div>
+          <div class="rule"><code>PRED-060</code><span>Its own <b>gossip topic</b>, carrying the quote's hash.</span></div>
+          <div class="rule"><code>PRED-070</code><span>Proposed: allow one trailing VERIFY frame that asserts the body <b>succeeded</b>.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LIMITS ============ -->
+  <section id="limits" aria-labelledby="limits-title">
+    <div class="wrap">
+      <div class="kicker reveal">The edges</div>
+      <h2 id="limits-title" class="reveal d1">What it <em>doesn’t</em> do.</h2>
+      <div class="limits">
+        <div class="limit reveal"><span class="n">i</span><h4>It doesn't force inclusion.</h4><p>PRED forces order, not inclusion. A builder can still leave the pair out.</p></div>
+        <div class="limit reveal d1"><span class="n">ii</span><h4>The builder still picks the quote.</h4><p>Inside one block, whoever orders it decides which quote lands. Selective inclusion is still open.</p></div>
+        <div class="limit reveal"><span class="n">iii</span><h4>A revert check also stops stale fills.</h4><p>What validity adds is that a stale trade can't land at all, so pool-paid gas is safe to offer.</p></div>
+        <div class="limit reveal d1"><span class="n">iv</span><h4>Gossip leaks timing.</h4><p>Peers that see a parked transaction learn it exists. Gossip is optional for that reason.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CLOSING ============ -->
+  <section class="closing" aria-labelledby="closing-title">
+    <div class="wrap">
+      <h2 id="closing-title" class="reveal">Valid later. <em>Valid right after.</em></h2>
+      <p class="sub reveal d1" style="margin-inline:auto">Two node rules for the two dependency classes the alt mempool turns away. Open source, and built to be broken.</p>
+      <div class="cta reveal d2">
+        <a class="btn solid" href="#" data-repo>View the code <span class="arr">→</span></a>
+        <a class="btn" href="#rules">Read the rules</a>
+      </div>
+      <div class="built reveal d3">
+        <span>EIP-8141</span><span>ERC-8421</span><span>EIP-8250 nonce keys</span><span>Uniswap v4</span><span>Foundry · viem</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span>Trellis · built at ETHGlobal Mumbai 2026 for the EF Frame Transaction alt mempool track</span>
+    <span style="display:flex;gap:16px;align-items:center">
+      <a href="#rules">Rules</a>
+      <a href="#" data-repo>GitHub</a>
+      <button class="theme-btn" id="theme" type="button" aria-label="Toggle colour theme">theme</button>
+    </span>
+  </div>
+</footer>
+
+<script src="main.js" defer></script>
+</body>
+</html>

@@ -1,18 +1,19 @@
 # Trellis web
 
-The landing page for Trellis. Plain HTML, CSS and JS: no build step and no dependencies.
+The Trellis landing page. React 19, Vite, Tailwind v4, Motion, and a small WebGL shader (ogl).
+It lives on its own: nothing here imports from `src/` or `contracts/`.
 
 ```sh
-# from the repo root
-npx serve web          # or: python3 -m http.server -d web 5173
+cd web
+npm install
+npm run dev        # http://localhost:5173
+npm run build      # static site in web/dist, deploy to Vercel, Netlify or Pages
 ```
 
-Or just open `web/index.html` in a browser.
-
-- `index.html`: the page. Every scene's final state is in the markup, so it reads fine without JS.
-- `styles.css`: design tokens at the top (colours, fonts), light and dark.
-- `main.js`: reveals, the hero loop and the step-through scenes. Set `REPO_URL` at the top.
-- `PLAN.md`: the overall frontend plan (landing, live console, inspector).
-
-Fonts (Instrument Serif, Geist, Geist Mono) load from Google Fonts, with system fallbacks if they don't.
-To deploy, drop the folder on any static host (Vercel, Netlify, GitHub Pages) with `web/` as the root.
+- Set the repo link in `src/config.ts` (`REPO_URL`) before judging.
+- Sections: hero (`Hero.tsx`), features bento (`Features.tsx`), the interactive demo (`Demo.tsx`),
+  keepers vs Trellis (`Compare.tsx`), the rule, FAQ and closing (`Spec.tsx`).
+- Numbers in the demo (block heights, 4.2 ETH, timestamps) are illustrative. Swap in real values from the live run.
+- Motion: the shader pauses off-screen and in background tabs, caps the pixel ratio at 1.5, and falls back to a CSS
+  gradient without WebGL. With reduced motion on, every scene shows its final state.
+- The old static page is in `_v1/`.

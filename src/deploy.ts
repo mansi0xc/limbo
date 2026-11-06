@@ -156,20 +156,6 @@ async function main(): Promise<void> {
 
   await sleep(1000);
 
-  const rescueDeadline = await readLatchDeadline(rescueLatch, rescueEventId);
-  const dlcDeadline = await readLatchDeadline(dlcLatch, dlcEventId);
-  const rescueExpiry = rescueDeadline + config.chequeExpirySeconds;
-  const dlcExpiry = dlcDeadline + config.chequeExpirySeconds;
-
-  const rescueStake = await getStake(rescueAccount);
-  const dlcStake = await getStake(dlcAccount);
-  if (rescueStake.amount < config.minStake) throw new Error("rescue account is not staked");
-  if (dlcStake.amount < config.minStake) throw new Error("DLC account is not staked");
-  if (!(await readBothFunded(dlcAccount))) throw new Error("DLC is not funded on both sides");
-
-  const rescueCodeHash = await getCodeHash(rescueAccount);
-  const dlcCodeHash = await getCodeHash(dlcAccount);
-
   writeState({
     deployer,
     owner,
@@ -180,20 +166,36 @@ async function main(): Promise<void> {
     rescueLatch,
     rescueAccount,
     rescueEventId,
-    rescueDeadline: rescueDeadline.toString(),
-    rescueExpiry: rescueExpiry.toString(),
-    rescueCodeHash,
     rescueStakeTx,
     rescuePingTx,
     dlcLatch,
     dlcAccount,
     dlcEventId,
-    dlcDeadline: dlcDeadline.toString(),
-    dlcExpiry: dlcExpiry.toString(),
-    dlcCodeHash,
     dlcStakeTx,
     dlcOpenTx,
   });
+
+  const rescueDeadline = await readLatchDeadline(rescueLatch, rescueEventId);
+  const dlcDeadline = await readLatchDeadline(dlcLatch, dlcEventId);
+  const rescueExpiry = rescueDeadline + config.chequeExpirySeconds;
+  const dlcExpiry = dlcDeadline + config.chequeExpirySeconds;
+
+  writeState({
+    rescueDeadline: rescueDeadline.toString(),
+    rescueExpiry: rescueExpiry.toString(),
+    dlcDeadline: dlcDeadline.toString(),
+    dlcExpiry: dlcExpiry.toString(),
+  });
+
+  const rescueCodeHash = await getCodeHash(rescueAccount);
+  const dlcCodeHash = await getCodeHash(dlcAccount);
+  writeState({ rescueCodeHash, dlcCodeHash });
+
+  const rescueStake = await getStake(rescueAccount);
+  const dlcStake = await getStake(dlcAccount);
+  if (rescueStake.amount < config.minStake) throw new Error("rescue account is not staked");
+  if (dlcStake.amount < config.minStake) throw new Error("DLC account is not staked");
+  if (!(await readBothFunded(dlcAccount))) throw new Error("DLC is not funded on both sides");
 
   console.log("");
   console.log("trellis is ready");

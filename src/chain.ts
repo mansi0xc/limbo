@@ -62,8 +62,21 @@ export async function sendAndWait(key: Hex, tx: LegacyTx): Promise<any> {
 }
 
 export async function getCodeHash(address: Address): Promise<Hex> {
-  const code = await publicClient.getCode({ address });
+  const code = await retryRead(() => publicClient.getCode({ address }));
   return keccak256(code ?? "0x");
+}
+
+async function retryRead<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
+  let last: unknown;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      last = error;
+      if (attempt < attempts - 1) await sleep(500 * (attempt + 1));
+    }
+  }
+  throw last;
 }
 
 export interface StakeInfo {
@@ -83,12 +96,14 @@ const DEPOSIT_INFO_ABI = [
 ] as const;
 
 export async function getStake(address: Address): Promise<StakeInfo> {
-  const out = (await publicClient.readContract({
-    address: config.stakingRegistry,
-    abi: DEPOSIT_INFO_ABI,
-    functionName: "getDepositInfo",
-    args: [address],
-  })) as readonly [bigint, number, bigint];
+  const out = (await retryRead(() =>
+    publicClient.readContract({
+      address: config.stakingRegistry,
+      abi: DEPOSIT_INFO_ABI,
+      functionName: "getDepositInfo",
+      args: [address],
+    })
+  )) as readonly [bigint, number, bigint];
 
   return {
     amount: out[0],
@@ -123,33 +138,39 @@ const LATCH_ABI = [
 
 export async function readLatchState(latch: Address, eventId: Hex): Promise<number> {
   return Number(
-    await publicClient.readContract({
-      address: latch,
-      abi: LATCH_ABI,
-      functionName: "state",
-      args: [eventId],
-    })
+    await retryRead(() =>
+      publicClient.readContract({
+        address: latch,
+        abi: LATCH_ABI,
+        functionName: "state",
+        args: [eventId],
+      })
+    )
   );
 }
 
 export async function readLatchDeadline(latch: Address, eventId: Hex): Promise<bigint> {
   return BigInt(
-    await publicClient.readContract({
-      address: latch,
-      abi: LATCH_ABI,
-      functionName: "deadline",
-      args: [eventId],
-    })
+    await retryRead(() =>
+      publicClient.readContract({
+        address: latch,
+        abi: LATCH_ABI,
+        functionName: "deadline",
+        args: [eventId],
+      })
+    )
   );
 }
 
 export async function readLatchGrace(latch: Address): Promise<number> {
   return Number(
-    await publicClient.readContract({
-      address: latch,
-      abi: LATCH_ABI,
-      functionName: "grace",
-    })
+    await retryRead(() =>
+      publicClient.readContract({
+        address: latch,
+        abi: LATCH_ABI,
+        functionName: "grace",
+      })
+    )
   );
 }
 
@@ -171,20 +192,24 @@ const DLC_READ_ABI = [
 ] as const;
 
 export async function readBothFunded(account: Address): Promise<boolean> {
-  return await publicClient.readContract({
-    address: account,
-    abi: DLC_READ_ABI,
-    functionName: "bothFunded",
-  });
+  return await retryRead(() =>
+    publicClient.readContract({
+      address: account,
+      abi: DLC_READ_ABI,
+      functionName: "bothFunded",
+    })
+  );
 }
 
 export async function readDeposit(account: Address, party: Address): Promise<bigint> {
-  return await publicClient.readContract({
-    address: account,
-    abi: DLC_READ_ABI,
-    functionName: "deposits",
-    args: [party],
-  });
+  return await retryRead(() =>
+    publicClient.readContract({
+      address: account,
+      abi: DLC_READ_ABI,
+      functionName: "deposits",
+      args: [party],
+    })
+  );
 }
 
 export { waitMined };
