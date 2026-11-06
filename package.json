@@ -1,0 +1,37 @@
+{
+  "name": "trellis",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Latch-triggered parked frame transactions for the EIP-8141 alt-mempool",
+  "engines": {
+    "node": ">=20.12"
+  },
+  "scripts": {
+    "build:contracts": "forge build && node scripts/export-artifacts.mjs",
+    "test:contracts": "forge test",
+    "deploy": "tsx src/deploy.ts",
+    "sign": "tsx src/sign.ts",
+    "park:a": "tsx src/park/node.ts --config a",
+    "park:b": "tsx src/park/node.ts --config b",
+    "demo:deadman": "tsx src/demo/deadman.ts",
+    "demo:dlc": "tsx src/demo/dlc.ts",
+    "demo:cap": "tsx src/demo/cap.ts",
+    "measure": "tsx src/measure.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@forshtat/hegota-support": "0.0.1",
+    "viem": "^2.57.7"
+  },
+  "devDependencies": {
+    "@esbuild/darwin-arm64": "^0.28.2",
+    "@rollup/rollup-darwin-arm64": "^4.67.5",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vite": "^7.0.0",
+    "vitest": "^5.0.5"
+  }
+}

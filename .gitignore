@@ -1,0 +1,9 @@
+node_modules/
+contracts/out/
+contracts/artifacts/
+cache/
+.env
+.trellis-state.json
+.park/
+dist/
+*.log
