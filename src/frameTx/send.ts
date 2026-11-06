@@ -9,6 +9,14 @@ export async function sendFrameTx(tx: FrameTransaction): Promise<Hex> {
   return (await rpc(config.gatewayUrl, "eth_sendFrameTransaction", [toWire(tx)])) as Hex;
 }
 
+/**
+ * The PRED demo path: submit a transaction that is invalid at the head through the devnet's
+ * privileged frame-transaction endpoint. This is an admin RPC, not a mempool rule.
+ */
+export async function sendPrivilegedFrameTx(tx: FrameTransaction): Promise<Hex> {
+  return (await rpc(config.rootUrl, "ethrex_submitPrivilegedFrameTransaction", [toWire(tx)])) as Hex;
+}
+
 /** The canonical mempool's verdict: the gateway forwards the raw type-0x06 transaction to ethrex. */
 export async function sendRawFrameTx(tx: FrameTransaction): Promise<Hex> {
   return (await rpc(config.gatewayUrl, "eth_sendRawTransaction", [encodeRawFrameTx(tx)])) as Hex;

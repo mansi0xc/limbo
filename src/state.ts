@@ -10,6 +10,7 @@ export interface TrellisState {
   bobKey?: Hex;
   oracleKey?: Hex;
   beneficiaryKey?: Hex;
+  makerKey?: Hex;
 
   deployer?: Address;
   owner?: Address;
@@ -17,6 +18,11 @@ export interface TrellisState {
   bob?: Address;
   oracle?: Address;
   beneficiary?: Address;
+  maker?: Address;
+
+  quoteBook?: Address;
+  quoteToken?: Address;
+  quoteBookCodeHash?: Hex;
 
   rescueLatch?: Address;
   rescueAccount?: Address;
@@ -45,7 +51,7 @@ export interface TrellisState {
   dlcGas?: string;
 }
 
-export type KeyName = "deployer" | "owner" | "alice" | "bob" | "oracle" | "beneficiary";
+export type KeyName = "deployer" | "owner" | "alice" | "bob" | "oracle" | "beneficiary" | "maker";
 
 const KEY_FIELD: Record<KeyName, keyof TrellisState> = {
   deployer: "deployerKey",
@@ -54,6 +60,7 @@ const KEY_FIELD: Record<KeyName, keyof TrellisState> = {
   bob: "bobKey",
   oracle: "oracleKey",
   beneficiary: "beneficiaryKey",
+  maker: "makerKey",
 };
 
 const ADDRESS_FIELD: Record<KeyName, keyof TrellisState> = {
@@ -63,6 +70,7 @@ const ADDRESS_FIELD: Record<KeyName, keyof TrellisState> = {
   bob: "bob",
   oracle: "oracle",
   beneficiary: "beneficiary",
+  maker: "maker",
 };
 
 export function readState(): TrellisState {

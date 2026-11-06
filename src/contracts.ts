@@ -5,7 +5,7 @@ import { config } from "./config.js";
 import { sendLegacy } from "./chain.js";
 import { waitMined } from "./rpc.js";
 
-export type ArtifactName = "Latch" | "RescueAccount" | "DLCAccount";
+export type ArtifactName = "Latch" | "RescueAccount" | "DLCAccount" | "QuoteBook" | "TestToken";
 
 export interface Artifact {
   abi: Abi;

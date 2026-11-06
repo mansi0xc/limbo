@@ -23,7 +23,8 @@ async function sendAndWait(key: Hex, tx: Parameters<typeof sendLegacy>[1]): Prom
 }
 
 async function fund(from: Hex, to: Address, value: bigint): Promise<void> {
-  const hash = await sendAndWait(from, { to, value, gas: 100_000n });
+  if ((await getBalance(to)) >= value) return;
+  const hash = await sendAndWait(from, { to, value, gas: 250_000n });
   console.log(`funded ${to} with ${formatEther(value)} ETH (${hash})`);
 }
 
@@ -44,7 +45,7 @@ async function main(): Promise<void> {
 
   const balance = await getBalance(deployer);
   console.log(`deployer ${deployer}: ${formatEther(balance)} ETH`);
-  if (balance < 400_000_000_000_000_000n) {
+  if (balance < 100_000_000_000_000_000n) {
     throw new Error(
       `deployer ${deployer} has ${formatEther(balance)} ETH; fund it or set TRELLIS_DEPLOYER_KEY to a funded devnet key`
     );
@@ -113,7 +114,7 @@ async function main(): Promise<void> {
       functionName: "open",
       args: [dlcEventId, now + config.dlc.deadlineSeconds],
     }),
-    gas: 150_000n,
+    gas: 300_000n,
   });
 
   console.log("staking the accounts...");
@@ -144,13 +145,13 @@ async function main(): Promise<void> {
     to: dlcAccount,
     value: config.dlc.deposit,
     data: encodeFunctionData({ abi: loadArtifact("DLCAccount").abi, functionName: "deposit" }),
-    gas: 200_000n,
+    gas: 400_000n,
   });
   await sendAndWait(bobKey, {
     to: dlcAccount,
     value: config.dlc.deposit,
     data: encodeFunctionData({ abi: loadArtifact("DLCAccount").abi, functionName: "deposit" }),
-    gas: 200_000n,
+    gas: 400_000n,
   });
 
   await sleep(1000);

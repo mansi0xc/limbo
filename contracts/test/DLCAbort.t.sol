@@ -125,6 +125,68 @@ contract DLCAbortTest is TestBase {
         );
     }
 
+    function testBobCannotVetoAfterBothFunded() public {
+        fundBoth();
+
+        vm.expectRevert(DLCAccount.BadSigner.selector);
+        account.verify(
+            BOB,
+            address(0),
+            0,
+            0,
+            uint8(ILatch.State.YES),
+            2.02 ether,
+            address(latch),
+            EVENT,
+            uint8(ILatch.State.YES)
+        );
+
+        vm.expectRevert(DLCAccount.BadSigner.selector);
+        account.verify(
+            BOB,
+            BOB,
+            0,
+            0,
+            uint8(ILatch.State.YES),
+            2.02 ether,
+            address(latch),
+            EVENT,
+            uint8(ILatch.State.YES)
+        );
+
+        vm.prank(ALICE);
+        latch.open(EVENT, uint64(block.timestamp) + 10);
+        vm.warp(block.timestamp + 21);
+        latch.expire(EVENT);
+
+        vm.expectRevert(DLCAccount.BadSigner.selector);
+        account.verify(
+            BOB,
+            address(0),
+            0,
+            0,
+            uint8(ILatch.State.EXPIRED),
+            2.02 ether,
+            address(latch),
+            EVENT,
+            uint8(ILatch.State.EXPIRED)
+        );
+
+        uint8 abortTag = account.ABORT_TAG();
+        vm.expectRevert(DLCAccount.AlreadyFunded.selector);
+        account.verify(
+            BOB,
+            address(0),
+            0,
+            0,
+            uint8(ILatch.State.UNSET),
+            2.02 ether,
+            address(latch),
+            EVENT,
+            abortTag
+        );
+    }
+
     function testAbortWrongSigner() public {
         fundAlice();
         vm.expectRevert(DLCAccount.BadSigner.selector);

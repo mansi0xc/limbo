@@ -19,7 +19,7 @@ export const config = {
   maxFeePerGas: parseGwei("2"),
   legacyGasPrice: parseGwei("2"),
   legacyGasLimit: 250_000n,
-  deployGasLimit: 6_000_000n,
+  deployGasLimit: 20_000_000n,
   txTimeoutSec: 180,
 
   pCap: 4,
