@@ -120,18 +120,6 @@ src/demo/                          deadman, DLC, and cap scenarios
 src/measure.ts                     receipt and simulation measurements
 ```
 
-## PRED and Uniswap feedback
-
-The PRED core is a same-block quote book, not a v4 hook:
-
-- `contracts/src/QuoteBook.sol` — `postQuote`, `validateTake`, `take`, `assertFilled`.
-- `contracts/src/TestToken.sol` — the token leg for the QuoteBook demo.
-- `src/frameTx/pred.ts` — quote and trade frame builders.
-- `FEEDBACK.md` — the Uniswap findings and the limits of the proposed hook workload.
-
-The Uniswap entry is a **proposed v4 workload**, not a shipped hook. The QuoteBook is the EF/PRED
-workload; the Uniswap feedback is the useful artifact until a real hook exists.
-
 ## Limits
 
 - The latch and the oracle are trust points. The rule does not make them trustless.

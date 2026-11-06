@@ -9,8 +9,6 @@ const files = [
   ["Latch.sol", "Latch"],
   ["RescueAccount.sol", "RescueAccount"],
   ["DLCAccount.sol", "DLCAccount"],
-  ["QuoteBook.sol", "QuoteBook"],
-  ["TestToken.sol", "TestToken"],
 ];
 
 fs.mkdirSync(artifacts, { recursive: true });
