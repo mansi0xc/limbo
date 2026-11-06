@@ -43,7 +43,7 @@ export const config = {
     grace: 10n,
   },
 
-  chequeExpirySeconds: 900n,
+  chequeExpirySeconds: 3600n,
 } as const;
 
 export type Config = typeof config;

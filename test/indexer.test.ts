@@ -47,6 +47,7 @@ describe("ParkIndexer", () => {
       readStake: async () => ({ amount: 1n, unstakeDelay: 0, withdrawTime: 0 }),
       readLatchState: async () => 3,
       readLatchDeadline: async () => 1000n,
+      readLatchGrace: async () => 10,
       now: async () => 1000n,
     };
 

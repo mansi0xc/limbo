@@ -33,6 +33,7 @@ function reader(overrides: Partial<ChainReader> = {}): ChainReader {
     readStake: async () => ({ amount: config.minStake, unstakeDelay: 86400, withdrawTime: 0 }),
     readLatchState: async () => 0,
     readLatchDeadline: async () => 2000n,
+    readLatchGrace: async () => 10,
     now: async () => 1000n,
     ...overrides,
   };
@@ -165,6 +166,20 @@ describe("park admission", () => {
     const result = await validate(tx, declared, [template], store, reader(), 1000n);
     expect(result.ok).toBe(false);
     expect(result.rule).toBe("PARK-040");
+  });
+
+  it("rejects a cheque that expires inside the latch grace window", async () => {
+    const { tx, declared, template } = await cheque({ expiry: 2070n });
+    const result = await validate(tx, declared, [template], store, reader(), 1000n);
+    expect(result.ok).toBe(false);
+    expect(result.rule).toBe("PARK-040");
+  });
+
+  it("accepts a cheque after the grace window plus the margin", async () => {
+    const { tx, declared, template } = await cheque({ expiry: 2071n });
+    const result = await validate(tx, declared, [template], store, reader(), 1000n);
+    expect(result.ok).toBe(true);
+    expect(result.rule).toBe("PARK-060");
   });
 
   it("enforces the live per-trigger cap", async () => {

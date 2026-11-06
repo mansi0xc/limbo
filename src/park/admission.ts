@@ -17,6 +17,7 @@ import type { ParkStore } from "./store.js";
 import type { ChainReader, ParkedEntry, Template, Trigger, Validation } from "./types.js";
 
 const reject = (rule: string, reason: string): Validation => ({ ok: false, rule, reason });
+const EXPIRY_MARGIN_SECONDS = 60n;
 
 /**
  * Template-bound admission. The node never trusts the submitter:
@@ -102,7 +103,10 @@ export async function validate(
 
   const deadline = await reader.readLatchDeadline(template.latch, template.eventId);
   if (deadline === 0n) return reject("PARK-040", "latch has no deadline");
-  if (expiry < deadline) return reject("PARK-040", "expiry is before the latch deadline");
+  const grace = await reader.readLatchGrace(template.latch);
+  if (expiry <= deadline + BigInt(grace) + EXPIRY_MARGIN_SECONDS) {
+    return reject("PARK-040", "expiry is inside the latch grace window");
+  }
 
   const latchState = await reader.readLatchState(template.latch, template.eventId);
   if (latchState !== 0) return reject("PARK-010", "latch is already settled");

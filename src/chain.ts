@@ -56,7 +56,9 @@ export async function sendLegacy(key: Hex, tx: LegacyTx, retries = 10): Promise<
 
 export async function sendAndWait(key: Hex, tx: LegacyTx): Promise<any> {
   const hash = await sendLegacy(key, tx);
-  return { hash, receipt: await waitMined(hash) };
+  const receipt = await waitMined(hash);
+  if (receipt.status !== "0x1") throw new Error(`transaction ${hash} reverted`);
+  return { hash, receipt };
 }
 
 export async function getCodeHash(address: Address): Promise<Hex> {
@@ -110,6 +112,13 @@ const LATCH_ABI = [
     inputs: [{ type: "bytes32" }],
     outputs: [{ type: "uint64" }],
   },
+  {
+    type: "function",
+    name: "grace",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint64" }],
+  },
 ] as const;
 
 export async function readLatchState(latch: Address, eventId: Hex): Promise<number> {
@@ -130,6 +139,16 @@ export async function readLatchDeadline(latch: Address, eventId: Hex): Promise<b
       abi: LATCH_ABI,
       functionName: "deadline",
       args: [eventId],
+    })
+  );
+}
+
+export async function readLatchGrace(latch: Address): Promise<number> {
+  return Number(
+    await publicClient.readContract({
+      address: latch,
+      abi: LATCH_ABI,
+      functionName: "grace",
     })
   );
 }

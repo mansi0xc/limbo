@@ -46,7 +46,7 @@ async function main(): Promise<void> {
       functionName: "expire",
       args: [requireState("rescueEventId")],
     }),
-    gas: 120_000n,
+    gas: 300_000n,
   });
 
   console.log("5. the park node promotes the rescue");

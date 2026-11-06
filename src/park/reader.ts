@@ -1,4 +1,4 @@
-import { getCodeHash, getStake, readLatchDeadline, readLatchState } from "../chain.js";
+import { getCodeHash, getStake, readLatchDeadline, readLatchGrace, readLatchState } from "../chain.js";
 import type { ChainReader } from "./types.js";
 
 export const chainReader: ChainReader = {
@@ -6,5 +6,6 @@ export const chainReader: ChainReader = {
   readStake: getStake,
   readLatchState,
   readLatchDeadline,
+  readLatchGrace,
   now: async () => BigInt(Math.floor(Date.now() / 1000)),
 };

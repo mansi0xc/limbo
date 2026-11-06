@@ -28,6 +28,7 @@ export interface ChainReader {
   readStake(address: Address): Promise<StakeInfo>;
   readLatchState(latch: Address, eventId: Hex): Promise<number>;
   readLatchDeadline(latch: Address, eventId: Hex): Promise<bigint>;
+  readLatchGrace(latch: Address): Promise<number>;
   now(): Promise<bigint>;
 }
 
