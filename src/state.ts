@@ -26,6 +26,9 @@ export interface TrellisState {
   rescueCodeHash?: Hex;
   rescueStakeTx?: Hex;
   rescuePingTx?: Hex;
+  rescueExpireTx?: Hex;
+  rescueExpireBlock?: string;
+  rescuePreTriggerVerdict?: string;
   rescueTxHash?: Hex;
   rescueIncludedBlock?: string;
   rescueGas?: string;
@@ -40,6 +43,8 @@ export interface TrellisState {
   dlcOpenTx?: Hex;
   dlcAttestTx?: Hex;
   dlcAttestBlock?: string;
+  dlcPreTriggerVerdict?: string;
+  dlcLoserVerdict?: string;
   dlcTxHash?: Hex;
   dlcIncludedBlock?: string;
   dlcGas?: string;

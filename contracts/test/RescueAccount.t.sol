@@ -26,7 +26,14 @@ contract RescueAccountHarness is RescueAccount {
         bytes32 eventId_,
         uint8 expectedTag
     ) external view {
-        _verify(signer, msg0, latchState, balance, latch_, eventId_, expectedTag);
+        _verify(signer, msg0, latchState, balance, latch_, eventId_, expectedTag, true);
+    }
+
+    function verifyMark(uint8 latchState, uint256 balance, address latch_, bytes32 eventId_, bool hasMark)
+        external
+        view
+    {
+        _verify(owner, 0, latchState, balance, latch_, eventId_, uint8(ILatch.State.EXPIRED), hasMark);
     }
 }
 
@@ -119,8 +126,50 @@ contract RescueAccountTest is TestBase {
         latch.expire(EVENT);
         vm.deal(address(account), 1 ether);
         vm.startPrank(OWNER);
-        vm.expectRevert(bytes("settled"));
+        vm.expectRevert(RescueAccount.RescuePending.selector);
         account.withdraw();
         vm.stopPrank();
+    }
+
+    function testMissingRescueMark() public {
+        vm.expectRevert(RescueAccount.MissingRescueMark.selector);
+        account.verifyMark(uint8(ILatch.State.EXPIRED), 1 ether, address(latch), EVENT, false);
+    }
+
+    function testMarkRescuedOnlySelf() public {
+        vm.startPrank(OWNER);
+        vm.expectRevert(bytes("self"));
+        account.markRescued();
+        vm.stopPrank();
+    }
+
+    /// Once the rescue has landed, the owner can sweep the leftover balance.
+    function testWithdrawLeftoverAfterRescue() public {
+        vm.prank(OWNER);
+        latch.ping(EVENT);
+        vm.warp(1111);
+        latch.expire(EVENT);
+        vm.deal(address(account), 0.5 ether);
+        vm.prank(address(account));
+        account.markRescued();
+        vm.prank(OWNER);
+        account.withdraw();
+        assertEq(OWNER.balance, 0.5 ether);
+    }
+
+    /// A settled-but-not-expired latch (YES on a fixed event) never freezes the owner's funds.
+    function testWithdrawAfterAttest() public {
+        Latch fixedLatch = new Latch(OWNER, address(0x0B0B), 0, 10);
+        RescueAccountHarness other = new RescueAccountHarness(
+            OWNER, BENEFICIARY, fixedLatch, EVENT, 0.1 ether, 0.01 ether, address(0x1234)
+        );
+        vm.prank(OWNER);
+        fixedLatch.open(EVENT, 2000);
+        vm.prank(address(0x0B0B));
+        fixedLatch.attest(EVENT, true);
+        vm.deal(address(other), 1 ether);
+        vm.prank(OWNER);
+        other.withdraw();
+        assertEq(OWNER.balance, 1 ether);
     }
 }

@@ -54,6 +54,8 @@ async function main(): Promise<void> {
   await fund(deployerKey, owner, 50_000_000_000_000_000n);
   await fund(deployerKey, alice, 120_000_000_000_000_000n);
   await fund(deployerKey, bob, 120_000_000_000_000_000n);
+  // The oracle sends the attest transaction in demo:dlc, so it needs gas money.
+  await fund(deployerKey, oracle, 10_000_000_000_000_000n);
 
   const rescueEventId = keccak256(toBytes("trellis:rescue"));
   const dlcEventId = keccak256(toBytes("trellis:dlc"));
@@ -86,6 +88,8 @@ async function main(): Promise<void> {
       bob,
       dlcLatch,
       dlcEventId,
+      config.dlc.deposit,
+      config.dlc.deposit,
       config.dlc.payoutA,
       config.dlc.payoutB,
       config.dlc.gasBuffer,

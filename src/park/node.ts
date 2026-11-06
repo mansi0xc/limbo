@@ -1,4 +1,5 @@
 import http from "node:http";
+import path from "node:path";
 import { isAddressEqual, type Address, type Hex } from "viem";
 import { config } from "../config.js";
 import { fromWire } from "../frameTx/wire.js";
@@ -31,9 +32,14 @@ function view(entry: ParkedEntry) {
     gasUsed: entry.gasUsed?.toString(),
     includedBlock: entry.includedBlock?.toString(),
     error: entry.error,
+    txId: entry.txId,
+    attempts: entry.attempts,
     receivedAt: entry.receivedAt,
   };
 }
+
+/** A malformed request: answered with 400, not 500. */
+class BadRequest extends Error {}
 
 async function readBody(req: http.IncomingMessage): Promise<any> {
   const chunks: Buffer[] = [];
@@ -42,11 +48,15 @@ async function readBody(req: http.IncomingMessage): Promise<any> {
   for await (const chunk of req) {
     const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
     size += buffer.length;
-    if (size > 2 * 1024 * 1024) throw new Error("body too large");
+    if (size > 2 * 1024 * 1024) throw new BadRequest("body too large");
     chunks.push(buffer);
   }
 
-  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    throw new BadRequest("body is not JSON");
+  }
 }
 
 function send(res: http.ServerResponse, status: number, body: unknown): void {
@@ -61,8 +71,11 @@ const peer = role === "a" ? `http://127.0.0.1:${config.ports.b}` : undefined;
 
 const state = readState();
 const templates = templatesFromState(state);
-const store = new ParkStore();
-const indexer = new ParkIndexer(store, templates, chainReader, role === "a");
+const store = new ParkStore({ file: path.join(config.parkDir, `${role}.json`) });
+const indexer = new ParkIndexer(store, templates, chainReader, {
+  primary: role === "a",
+  fallbackAfterMs: config.fallbackPromoteMs,
+});
 
 const server = http.createServer(async (req, res) => {
   try {
@@ -80,6 +93,7 @@ const server = http.createServer(async (req, res) => {
           parked: store.list("parked").length,
           promoted: store.list("promoted").length,
           evicted: store.list("evicted").length,
+          failed: store.list("failed").length,
         },
       });
     }
@@ -89,12 +103,26 @@ const server = http.createServer(async (req, res) => {
       const trigger = body.trigger as Trigger;
       if (!body.tx || !trigger) return send(res, 400, { ok: false, rule: "PARK-010", reason: "missing tx or trigger" });
 
-      const tx = fromWire(body.tx);
+      let tx;
+      try {
+        tx = fromWire(body.tx);
+      } catch (error) {
+        throw new BadRequest(`tx is not a frame transaction: ${error instanceof Error ? error.message : String(error)}`);
+      }
       const local = await validate(tx, trigger, templates, store, chainReader);
 
+      // The local verdict stands on its own: an unreachable peer is reported, not turned into a 500.
       let peerResult: unknown;
       if (local.ok && peer) {
-        peerResult = await gossip(peer, { tx: body.tx, trigger });
+        try {
+          peerResult = await gossip(peer, { tx: body.tx, trigger });
+        } catch (error) {
+          peerResult = {
+            ok: false,
+            rule: "PARK-080",
+            reason: `peer unreachable: ${error instanceof Error ? error.message : String(error)}`,
+          };
+        }
       }
 
       return send(res, local.ok ? 200 : 400, {
@@ -107,6 +135,9 @@ const server = http.createServer(async (req, res) => {
 
     return send(res, 404, { ok: false, rule: "PARK-404", reason: "not found" });
   } catch (error) {
+    if (error instanceof BadRequest) {
+      return send(res, 400, { ok: false, rule: "PARK-400", reason: error.message });
+    }
     return send(res, 500, {
       ok: false,
       rule: "PARK-500",
@@ -119,6 +150,8 @@ server.listen(port, "127.0.0.1", () => {
   console.log(`trellis park node ${role} listening on http://127.0.0.1:${port}`);
   console.log(`templates: ${templates.map((template) => `${template.kind}=${template.account}`).join(", ")}`);
   if (peer) console.log(`gossip peer: ${peer}`);
+  console.log(`store: ${store.list().length} entries loaded from ${config.parkDir}`);
+  if (role !== "a") console.log(`fallback promoter after ${config.fallbackPromoteMs}ms`);
   indexer.start();
 });
 

@@ -5,7 +5,7 @@ import { sendFrameTx, explorerLink, validationGas, waitForReceipt } from "../fra
 import { sleep } from "../rpc.js";
 import { buildRescue, park, waitForPromotion } from "../sign.js";
 import { getBalance, sendAndWait } from "../chain.js";
-import { readState, requireState } from "../state.js";
+import { readState, requireState, writeState } from "../state.js";
 
 async function main(): Promise<void> {
   const state = readState();
@@ -17,8 +17,11 @@ async function main(): Promise<void> {
   try {
     const hash = await sendFrameTx(checkout.tx);
     console.log(`   unexpected: the live mempool accepted ${hash}`);
+    writeState({ rescuePreTriggerVerdict: `accepted ${hash}` });
   } catch (error) {
-    console.log(`   rejected as expected: ${error instanceof Error ? error.message : String(error)}`);
+    const message = error instanceof Error ? error.message : String(error);
+    console.log(`   rejected as expected: ${message}`);
+    writeState({ rescuePreTriggerVerdict: `rejected: ${message}` });
   }
 
   console.log("2. park the same bytes");
@@ -39,7 +42,7 @@ async function main(): Promise<void> {
   }
 
   console.log("4. anyone expires the latch");
-  const expireHash = await sendAndWait(requireState("deployerKey"), {
+  const { hash: expireHash, receipt: expireReceipt } = await sendAndWait(requireState("deployerKey"), {
     to: requireState("rescueLatch"),
     data: encodeFunctionData({
       abi: loadArtifact("Latch").abi,
@@ -48,6 +51,8 @@ async function main(): Promise<void> {
     }),
     gas: 300_000n,
   });
+
+  writeState({ rescueExpireTx: expireHash, rescueExpireBlock: BigInt(expireReceipt.blockNumber).toString() });
 
   console.log("5. the park node promotes the rescue");
   const promoted = await waitForPromotion("rescue");

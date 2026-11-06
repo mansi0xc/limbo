@@ -1,3 +1,6 @@
+> **Early idea notes, kept for history.** Not a description of the current code; see the
+> [README](../../README.md) and [`docs/park-rule.md`](../park-rule.md).
+
 # Trellis
 
 Trellis is a reference implementation of **PARK**, a node policy that adds a **parked** state to the

@@ -1,8 +1,21 @@
 # PARK: a parked state for latch-triggered frame transactions
 
-**Status:** Draft, node policy for discussion. Not a consensus change.
+**Status:** v2 draft for discussion, **not implemented**. Not a consensus change.
 **Scope:** ERC-8421 alternative-mempool nodes handling EIP-8141 frame transactions.
-**Reference implementation:** Trellis (two independent park nodes, devnet 1337).
+**What Trellis implements:** [`park-rule.md`](park-rule.md) (PARK-010…080). This draft is where the
+rule goes next; the gaps are listed below so nobody reads it as a description of the code.
+
+> **Implemented vs this draft**
+>
+> | This draft | Trellis today |
+> |---|---|
+> | Interface-based admission (`ILatchTriggered`, `tagOf`) | Allow-listed templates: exact account address + code hash per deploy |
+> | Caps ranked by `(entity_stake, age)`; incumbents can be ranked out | First-come live caps (`P=4` per trigger, `E=8` per entity) |
+> | Losing siblings evicted only after the winner is confirmed (reorg-safe) | Losers evicted as soon as the latch read changes; no reorg handling |
+> | PARK-090 reputation classification | Not implemented |
+> | Gossip is PARK-100 | Gossip is PARK-080 |
+>
+> Rule numbers in this draft therefore do not line up with the implemented rule after PARK-070.
 
 ## 0. Summary
 

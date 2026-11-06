@@ -218,4 +218,46 @@ describe("park admission", () => {
     expect(second.ok).toBe(true);
     expect(store.siblings(ACCOUNT, 1n, 0n)).toHaveLength(2);
   });
+
+  it("rejects a resubmission of the same bytes instead of filling the caps", async () => {
+    const { tx, declared, template } = await cheque();
+    const first = await validate(tx, declared, [template], store, reader(), 1000n);
+    expect(first.ok).toBe(true);
+
+    for (let i = 0; i < config.eCap; i++) {
+      const again = await validate(tx, declared, [template], store, reader(), 1000n);
+      expect(again.ok).toBe(false);
+      expect(again.rule).toBe("PARK-050");
+      expect(again.reason).toContain("duplicate");
+    }
+    expect(store.countByEntity(ACCOUNT)).toBe(1);
+  });
+
+  it("rejects a signature over a non-canonical message", async () => {
+    const { tx, declared, template } = await cheque();
+    const tampered: FrameTransaction = {
+      ...tx,
+      signatures: tx.signatures.map((sig) => ({ ...sig, msg: "0x01" as Hex })),
+    };
+    const result = await validate(tampered, declared, [template], store, reader(), 1000n);
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain("non-canonical");
+  });
+
+  it("rejects a bad signature before any chain read", async () => {
+    const { tx, declared, template } = await cheque({ signers: [other] });
+    const fail = async (): Promise<never> => {
+      throw new Error("no chain reads expected");
+    };
+    const result = await validate(
+      tx,
+      declared,
+      [template],
+      store,
+      reader({ readCodeHash: fail, readStake: fail, readLatchState: fail, readLatchDeadline: fail, readLatchGrace: fail }),
+      1000n
+    );
+    expect(result.ok).toBe(false);
+    expect(result.rule).toBe("PARK-030");
+  });
 });

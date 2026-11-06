@@ -8,7 +8,9 @@ import {ILatch} from "./interfaces/ILatch.sol";
 /// - `ping` for a heartbeat: the owner can extend the deadline while the latch is unset.
 /// - `open` for a fixed deadline: the owner sets it once and cannot extend it.
 ///
-/// The oracle may attest YES or NO before the deadline. Anyone may expire the latch after the
+/// The oracle may attest YES or NO before the deadline, and only on a fixed-deadline (`open`) event. A
+/// heartbeat event can only end in EXPIRED: an oracle attestation there would strand anything that
+/// waits for EXPIRED, such as a deadman rescue. Anyone may expire the latch after the
 /// deadline plus the grace period. Every transition starts from UNSET, so the state is write-once.
 contract Latch is ILatch {
     address public immutable owner;
@@ -29,6 +31,7 @@ contract Latch is ILatch {
     error NotOpened();
     error DeadlinePassed();
     error GraceNotPassed();
+    error NotFixed();
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
@@ -68,6 +71,7 @@ contract Latch is ILatch {
 
     function attest(bytes32 eventId, bool yes) external override onlyOracle {
         if (deadline[eventId] == 0) revert NotOpened();
+        if (!locked[eventId]) revert NotFixed();
         if (state[eventId] != ILatch.State.UNSET) revert Settled();
         if (block.timestamp > uint256(deadline[eventId])) revert DeadlinePassed();
         ILatch.State next = yes ? ILatch.State.YES : ILatch.State.NO;

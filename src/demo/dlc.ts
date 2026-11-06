@@ -15,8 +15,11 @@ async function main(): Promise<void> {
   try {
     const hash = await sendFrameTx(checkout.yes.tx);
     console.log(`   unexpected: the live mempool accepted ${hash}`);
+    writeState({ dlcPreTriggerVerdict: `accepted ${hash}` });
   } catch (error) {
-    console.log(`   rejected as expected: ${error instanceof Error ? error.message : String(error)}`);
+    const message = error instanceof Error ? error.message : String(error);
+    console.log(`   rejected as expected: ${message}`);
+    writeState({ dlcPreTriggerVerdict: `rejected: ${message}` });
   }
 
   console.log("2. park YES and NO, which share one nonce key");
@@ -29,7 +32,7 @@ async function main(): Promise<void> {
   if (no.peer) console.log(`   node B NO:  ${no.peer.ok ? "accepted" : "rejected"} ${no.peer.rule}`);
 
   console.log("3. the oracle attests NO");
-  const attestHash = await sendAndWait(requireState("oracleKey"), {
+  const { hash: attestHash, receipt: attestReceipt } = await sendAndWait(requireState("oracleKey"), {
     to: requireState("dlcLatch"),
     data: encodeFunctionData({
       abi: loadArtifact("Latch").abi,
@@ -38,7 +41,6 @@ async function main(): Promise<void> {
     }),
     gas: 120_000n,
   });
-  const attestReceipt = await waitForReceipt(attestHash);
   writeState({
     dlcAttestTx: attestHash,
     dlcAttestBlock: BigInt(attestReceipt.blockNumber).toString(),
@@ -53,8 +55,11 @@ async function main(): Promise<void> {
   try {
     const hash = await sendFrameTx(checkout.yes.tx);
     console.log(`   unexpected: the losing cheque was accepted ${hash}`);
+    writeState({ dlcLoserVerdict: `accepted ${hash}` });
   } catch (error) {
-    console.log(`   rejected as expected: ${error instanceof Error ? error.message : String(error)}`);
+    const message = error instanceof Error ? error.message : String(error);
+    console.log(`   rejected as expected: ${message}`);
+    writeState({ dlcLoserVerdict: `rejected: ${message}` });
   }
 
   const status = await nodeStatus();

@@ -1,3 +1,6 @@
+> **Hackathon build plan, kept for history.** Not a description of the current code; see the
+> [README](../../README.md) and [`docs/park-rule.md`](../park-rule.md).
+
 # Build plan
 
 ## Goal

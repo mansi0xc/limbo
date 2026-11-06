@@ -6,19 +6,26 @@ import {Devnet} from "@forshtat/hegota-support/contracts/Devnet.sol";
 import {Scope, SigParam} from "@forshtat/hegota-support/contracts/Params.sol";
 import {ILatch} from "./interfaces/ILatch.sol";
 import {IStakingRegistry} from "./interfaces/IStakingRegistry.sol";
+import {FrameIntrospection} from "./lib/FrameIntrospection.sol";
 
 /// A 2-of-2 binary DLC account. All outcome cheques share one EIP-8250 key at sequence 0, so the
 /// first promoted value consumes the key and the siblings become invalid.
 ///
-/// The refund after EXPIRED uses the recorded deposits. If only one side funded, that side can sign
-/// an ABORT cheque alone; the abort also marks the account so later deposits are rejected.
-contract DLCAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
+/// Each side has a required stake. The DLC counts as funded only once both stakes are met, so a dust
+/// deposit cannot flip the account into "funded" and block the abort path.
+///
+/// If only one side met its stake, that side can sign an ABORT cheque alone. The ABORT cheque must
+/// call `markAborted` on the account and may not do anything else as the account: every SENDER frame
+/// has to be a zero-value self-call. After the abort, each party pulls its own deposit with `claim`.
+contract DLCAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP), FrameIntrospection {
     uint8 public constant ABORT_TAG = 4;
 
     address public immutable alice;
     address public immutable bob;
     ILatch public immutable latch;
     bytes32 public immutable eventId;
+    uint256 public immutable stakeA;
+    uint256 public immutable stakeB;
     uint256 public immutable payoutA;
     uint256 public immutable payoutB;
     uint256 public immutable gasBuffer;
@@ -35,9 +42,11 @@ contract DLCAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
     error NotFunded();
     error AlreadyFunded();
     error AlreadyAborted();
+    error NotAborted();
+    error MissingAbortMark();
 
-    modifier onlyAlice() {
-        require(msg.sender == alice, "not alice");
+    modifier onlyParty() {
+        require(msg.sender == alice || msg.sender == bob, "not party");
         _;
     }
 
@@ -46,6 +55,8 @@ contract DLCAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
         address bob_,
         ILatch latch_,
         bytes32 eventId_,
+        uint256 stakeA_,
+        uint256 stakeB_,
         uint256 payoutA_,
         uint256 payoutB_,
         uint256 gasBuffer_,
@@ -54,10 +65,14 @@ contract DLCAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
         require(alice_ != address(0) && bob_ != address(0), "parties");
         require(address(latch_) != address(0), "latch");
         require(gasBuffer_ > 0, "buffer");
+        require(stakeA_ > 0 && stakeB_ > 0, "stakes");
+        require(payoutA_ + payoutB_ <= stakeA_ + stakeB_, "payouts exceed stakes");
         alice = alice_;
         bob = bob_;
         latch = latch_;
         eventId = eventId_;
+        stakeA = stakeA_;
+        stakeB = stakeB_;
         payoutA = payoutA_;
         payoutB = payoutB_;
         gasBuffer = gasBuffer_;
@@ -66,23 +81,34 @@ contract DLCAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
 
     receive() external payable {}
 
-    function deposit() external payable {
-        require(msg.sender == alice || msg.sender == bob, "not party");
+    function deposit() external payable onlyParty {
         if (aborted) revert AlreadyAborted();
         require(latch.state(eventId) == ILatch.State.UNSET, "settled");
         require(msg.value > 0, "zero");
         deposits[msg.sender] += msg.value;
-        bothFunded = deposits[alice] > 0 && deposits[bob] > 0;
+        bothFunded = deposits[alice] >= stakeA && deposits[bob] >= stakeB;
     }
 
-    /// Called by the account itself from an ABORT cheque's SENDER frame, so no later deposit can be
-    /// stranded behind the consumed nonce key.
+    /// Called by the account itself from an ABORT cheque's SENDER frame. The VERIFY frame refuses an
+    /// ABORT cheque that does not carry this call, so no later deposit can be stranded behind the
+    /// consumed nonce key.
     function markAborted() external {
         require(msg.sender == address(this), "self");
         aborted = true;
     }
 
-    function stake(uint32 delay) external payable onlyAlice {
+    /// After an abort, each party pulls back what it deposited.
+    function claim() external onlyParty {
+        if (!aborted) revert NotAborted();
+        uint256 amount = deposits[msg.sender];
+        deposits[msg.sender] = 0;
+        (bool ok,) = msg.sender.call{value: amount}("");
+        require(ok, "claim");
+    }
+
+    /// Either party may stake the account. The stake sits in the registry under the account's address;
+    /// getting it back needs a cheque whose SENDER frame calls the registry's unlock/withdraw.
+    function stake(uint32 delay) external payable onlyParty {
         IStakingRegistry(stakingRegistry).addStake{value: msg.value}(delay);
     }
 
@@ -94,7 +120,11 @@ contract DLCAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
 
         address signer1 = address(0);
         uint256 msg1 = 0;
-        if (expectedTag != ABORT_TAG) {
+        bool abortShape = false;
+        if (expectedTag == ABORT_TAG) {
+            SenderFrames memory frames = _senderFrames(this.markAborted.selector);
+            abortShape = frames.hasMark && frames.onlySelfCalls;
+        } else {
             signer1 = address(uint160(sigparam(1, SigParam.RESOLVED_SIGNER)));
             msg1 = sigparam(1, SigParam.MSG);
         }
@@ -108,7 +138,8 @@ contract DLCAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
             address(this).balance,
             latch_,
             eventId_,
-            expectedTag
+            expectedTag,
+            abortShape
         );
         approve(Scope.EXECUTION_AND_PAYMENT);
     }
@@ -122,7 +153,8 @@ contract DLCAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
         uint256 balance,
         address latch_,
         bytes32 eventId_,
-        uint8 expectedTag
+        uint8 expectedTag,
+        bool abortShape
     ) internal view {
         if (msg0 != 0) revert BadSigner();
         if (latch_ != address(latch) || eventId_ != eventId) revert BadTrigger();
@@ -132,6 +164,7 @@ contract DLCAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
             if (bothFunded) revert AlreadyFunded();
             if (signer0 != alice && signer0 != bob) revert BadSigner();
             if (deposits[signer0] == 0) revert NotFunded();
+            if (!abortShape) revert MissingAbortMark();
             if (balance < deposits[alice] + deposits[bob] + gasBuffer) revert NoRoom();
             return;
         }

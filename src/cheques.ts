@@ -1,6 +1,6 @@
 import { encodeFunctionData } from "viem";
 import { config } from "./config.js";
-import { loadArtifact } from "./contracts.js";
+import { loadArtifact, type ArtifactName } from "./contracts.js";
 import { buildLatchedTx, signLatchedTx } from "./frameTx/build.js";
 import type { FrameTransaction } from "./frameTx/types.js";
 import { requireState } from "./state.js";
@@ -17,6 +17,14 @@ export type DlcCheques = {
   refund: Cheque;
 };
 
+/** A zero-value SENDER frame that calls a no-argument marker function on the account itself. */
+export function selfCall(account: `0x${string}`, artifact: ArtifactName, functionName: string) {
+  return {
+    to: account,
+    data: encodeFunctionData({ abi: loadArtifact(artifact).abi, functionName }),
+  };
+}
+
 export async function buildRescue(): Promise<Cheque> {
   const trigger: Trigger = {
     latch: requireState("rescueLatch"),
@@ -29,6 +37,7 @@ export async function buildRescue(): Promise<Cheque> {
     signers: [requireState("owner")],
     trigger,
     expiry: BigInt(requireState("rescueExpiry")),
+    calls: [selfCall(requireState("rescueAccount"), "RescueAccount", "markRescued")],
     payouts: [{ to: requireState("beneficiary"), value: config.rescue.amount }],
     nonceKey: 1n,
     nonceSeq: 0n,
@@ -88,16 +97,10 @@ export async function buildAbort(depositor: "alice" | "bob"): Promise<Cheque> {
     signers: [requireState(depositor)],
     trigger,
     expiry: BigInt(requireState("dlcExpiry")),
-    calls: [
-      {
-        to: sender,
-        data: encodeFunctionData({
-          abi: loadArtifact("DLCAccount").abi,
-          functionName: "markAborted",
-        }),
-      },
-    ],
-    payouts: [{ to: requireState(depositor), value: config.dlc.deposit }],
+    // The account refuses an ABORT cheque with any SENDER frame other than zero-value self-calls, so the
+    // abort only marks the account; each party then pulls its own deposit with `claim()`.
+    calls: [selfCall(sender, "DLCAccount", "markAborted")],
+    payouts: [],
     nonceKey: 1n,
     nonceSeq: 0n,
   });

@@ -24,6 +24,8 @@ contract DLCAccountTest is TestBase {
             BOB,
             latch,
             EVENT,
+            1 ether,
+            1 ether,
             0.99 ether,
             0.99 ether,
             0.02 ether,
@@ -62,7 +64,7 @@ contract DLCAccountTest is TestBase {
 
     function testDepositAfterAttest() public {
         vm.prank(ALICE);
-        latch.ping(EVENT);
+        latch.open(EVENT, 1100);
         vm.warp(1050);
         vm.prank(ORACLE);
         latch.attest(EVENT, true);
@@ -161,5 +163,31 @@ contract DLCAccountTest is TestBase {
             EVENT,
             uint8(ILatch.State.EXPIRED)
         );
+    }
+
+    /// A dust deposit does not count as funding: the account stays unfunded and the other side can still abort.
+    function testDustDepositDoesNotFund() public {
+        fundAlice();
+        vm.deal(BOB, 1 ether);
+        vm.prank(BOB);
+        account.deposit{value: 1}();
+        assertTrue(!account.bothFunded());
+        account.verify(ALICE, address(0), 0, 0, 0, 1.02 ether + 1, address(latch), EVENT, account.ABORT_TAG());
+    }
+
+    function testStakeThreshold() public {
+        fundAlice();
+        vm.deal(BOB, 10 ether);
+        vm.prank(BOB);
+        account.deposit{value: 0.5 ether}();
+        assertTrue(!account.bothFunded());
+        vm.prank(BOB);
+        account.deposit{value: 0.5 ether}();
+        assertTrue(account.bothFunded());
+    }
+
+    function testPayoutsCannotExceedStakes() public {
+        vm.expectRevert(bytes("payouts exceed stakes"));
+        new DLCAccountHarness(ALICE, BOB, latch, EVENT, 1 ether, 1 ether, 1.5 ether, 0.6 ether, 0.02 ether, address(0x1234));
     }
 }

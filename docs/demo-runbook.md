@@ -114,10 +114,17 @@ node B already has the first four from gossip.
 yarn measure
 ```
 
-The script calls `ethrex_simulateFrameTransaction` on the root URL and reads the promoted
-transaction's receipt. Gas comes from `frameReceipts[0].gasUsed` or the simulation, never from the
-admission report. It prints the validation gas, included block, and the attest-to-inclusion block
-distance.
+Run it after `demo:deadman` and `demo:dlc`. The script calls `ethrex_simulateFrameTransaction` on the
+root URL, then reads what the demos recorded in `.trellis-state.json` and the promoted receipts. It
+prints a Markdown table, one row per workload:
+
+- the live mempool's verdict on the cheque before the trigger (recorded by the demo);
+- the trigger transaction's block, the inclusion block, and the blocks between them;
+- validation gas (frames 0 and 1) and total frame gas, from the receipt;
+- for the DLC, the verdict on resubmitting the losing sibling after the winner landed.
+
+Every number comes from a receipt or a recorded RPC response, never from the admission report. Paste
+the table into the submission as-is.
 
 ## Troubleshooting
 
@@ -127,7 +134,9 @@ distance.
   `yarn deploy`.
 - **`PARK-040` / `expiry is before the latch deadline`** — the state's expiry is stale. Redeploy.
 - **`PARK-050` / per-trigger cap reached** — the demo already parked `P` entries for that trigger.
-  Restart the nodes or use a fresh deploy.
+  The park area survives restarts (`.park/`), so delete `.park/` or use a fresh deploy.
+- **`PARK-050` / duplicate of entry ...** — those exact bytes are already parked or promoted on this
+  node. Nothing to do.
 - **`NotExpired` / `BadState` from the account** — the trigger is being submitted before the latch
   changed. This is the expected pre-trigger rejection.
 - **`transaction ... was not mined within 180s`** — the devnet is stalled; check step 0. Do not send
@@ -135,5 +144,5 @@ distance.
 
 ## Reset
 
-Stop the nodes, delete `.trellis-state.json`, and re-run `yarn deploy`. The next deploy creates a new
+Stop the nodes, delete `.trellis-state.json` and `.park/`, and re-run `yarn deploy`. The next deploy creates a new
 rescue account, DLC account, and latch set. The old devnet contracts remain; they are not reused.

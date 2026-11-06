@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { keccak256, toBytes, type Address, type Hex } from "viem";
 import type { FrameTransaction } from "../src/frameTx/types.js";
@@ -13,6 +16,7 @@ const trigger = (tag: number): Trigger => ({ latch: LATCH, eventId: EVENT, expec
 function entry(id: string, tag = 3, key = 1n, status: ParkedEntry["status"] = "parked"): ParkedEntry {
   return {
     id,
+    txId: keccak256(toBytes(`tx-${id}`)),
     kind: "rescue",
     tx: {} as FrameTransaction,
     trigger: trigger(tag),
@@ -50,5 +54,35 @@ describe("ParkStore", () => {
     store.setStatus("a", "promoted", { txHash: "0xdead" as Hex });
     expect(store.countByTrigger(trigger(3))).toBe(1);
     expect(store.list("promoted")).toHaveLength(1);
+  });
+
+  it("finds a live duplicate by tx id until it leaves the live statuses", () => {
+    const store = new ParkStore();
+    const a = entry("a");
+    store.add(a);
+    expect(store.findLive(a.txId)?.id).toBe("a");
+    store.setStatus("a", "promoted");
+    expect(store.findLive(a.txId)?.id).toBe("a");
+    store.setStatus("a", "evicted");
+    expect(store.findLive(a.txId)).toBeUndefined();
+  });
+
+  it("persists entries with bigints and reloads the indexes", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-store-"));
+    const file = path.join(dir, "a.json");
+    const first = new ParkStore({ file });
+    first.add(entry("a", 3, 1n));
+    first.add(entry("b", 2, 1n));
+    first.setStatus("b", "evicted", { error: "latch state 3" });
+
+    const second = new ParkStore({ file });
+    expect(second.list()).toHaveLength(2);
+    expect(second.get("a")?.nonceKey).toBe(1n);
+    expect(second.get("a")?.expiry).toBe(1000n);
+    expect(second.get("b")?.status).toBe("evicted");
+    expect(second.countByTrigger(trigger(3))).toBe(1);
+    expect(second.siblings(ACCOUNT, 1n, 0n)).toHaveLength(2);
+    expect(second.findLive(entry("a").txId)?.id).toBe("a");
+    fs.rmSync(dir, { recursive: true, force: true });
   });
 });

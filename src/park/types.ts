@@ -32,10 +32,19 @@ export interface ChainReader {
   now(): Promise<bigint>;
 }
 
-export type EntryStatus = "parked" | "promoted" | "evicted" | "expired" | "rejected";
+/**
+ * - parked: waiting for its trigger;
+ * - promoted: landed on chain (sent by this node or seen landed);
+ * - evicted: lost to the latch state or to a promoted sibling;
+ * - expired: its expiry_verify deadline passed;
+ * - failed: a promotion failed for good (mined with a failed frame, or its nonce was already consumed).
+ */
+export type EntryStatus = "parked" | "promoted" | "evicted" | "expired" | "failed" | "rejected";
 
 export interface ParkedEntry {
   id: string;
+  /** keccak256 of the wire bytes; identical resubmissions share it. */
+  txId: Hex;
   kind: "rescue" | "dlc";
   tx: FrameTransaction;
   trigger: Trigger;
@@ -51,6 +60,10 @@ export interface ParkedEntry {
   gasUsed?: bigint;
   includedBlock?: bigint;
   error?: string;
+  /** Failed promotion attempts so far. */
+  attempts?: number;
+  /** Wall-clock ms before which the indexer does not retry this entry. */
+  nextAttemptAt?: number;
 }
 
 export interface Validation {

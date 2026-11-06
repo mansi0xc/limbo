@@ -59,6 +59,10 @@ Each node MUST enforce a per-entity parked cap and a per-trigger parked cap. The
 policy, not consensus. A node MUST reject entry `P+1` for one trigger, not only at the end of a
 bundle. The reference caps are `P=4` and `E=8`.
 
+A resubmission of bytes the node already holds (parked or promoted, matched by transaction hash) MUST
+be rejected and MUST NOT count again. Otherwise anyone who saw the bytes, for example through gossip,
+could replay one cheque until the per-entity cap blocks the other outcomes.
+
 ### PARK-060 — Promotion and eviction
 
 A node MUST index entries by `(latch, eventId, expectedTag)`. When the latch changes, it MUST:
@@ -69,6 +73,18 @@ A node MUST index entries by `(latch, eventId, expectedTag)`. When the latch cha
 
 A loser MUST NOT be simulated. The winner consumes the shared nonce key, so the other values of that
 key become invalid once the winner lands.
+
+A sibling group is `(sender, nonce key, nonce seq)`. Matching entries on different keys are independent
+transactions and are promoted independently.
+
+A promotion that fails transiently (gateway error, receipt timeout) is retried with exponential backoff.
+A promotion that can never succeed (mined with a failed frame, or its nonce already consumed) marks the
+entry failed and evicts its siblings; the node does not resend it.
+
+The reference deployment runs two nodes. Node A promotes as soon as the latch settles. Node B promotes a
+matching entry that is still parked 30 seconds after it saw the latch settle, so the trigger still lands
+if node A is down. The promoter checks for an existing receipt first, and the shared nonce makes a
+double send harmless. Each node persists its park area to `.park/<node>.json` and reloads it on start.
 
 ### PARK-070 — Sibling exception
 
@@ -88,11 +104,24 @@ require a global shared park.
 ## Reference implementation
 
 - `src/park/admission.ts` implements PARK-010…050.
-- `src/park/store.ts` indexes the parked set and implements the caps and sibling groups.
+- `src/park/store.ts` indexes the parked set, implements the caps, sibling groups and duplicate
+  lookup, and persists the park area.
 - `src/park/indexer.ts` implements PARK-060, including zero-simulation eviction.
 - `src/park/promoter.ts` submits the parked bytes unchanged and records the receipt gas.
 - `src/park/node.ts` runs the two-node server; `src/park/gossip.ts` is the peer path.
 - `src/park/templates.ts` builds the rescue and DLC templates from the deployed state.
+
+## Next: v2
+
+[`park-rule-v2-draft.md`](park-rule-v2-draft.md) is the unimplemented next step. In short:
+
+- **Interface-based admission** instead of per-deploy templates, so any account that exposes its
+  trigger can be parked without node configuration. Today each node is configured with the exact
+  account addresses and code hashes from one deploy; that is a reference-implementation shortcut,
+  not part of the rule.
+- **Caps ranked by stake** instead of first-come, so filling a trigger costs stake linear in the
+  slots taken.
+- **Reorg-safe eviction**: keep losing siblings until the winner is confirmed.
 
 ## Canonical baseline
 

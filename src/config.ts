@@ -26,6 +26,10 @@ export const config = {
   eCap: 8,
 
   ports: { a: 8787, b: 8788 },
+  /** Node B promotes a still-parked matching entry this long after it saw the latch settle. */
+  fallbackPromoteMs: 30_000,
+  /** Where each park node persists its store. */
+  parkDir: path.resolve(".park"),
 
   rescue: {
     amount: parseEther("0.02"),

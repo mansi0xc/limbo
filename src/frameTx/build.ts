@@ -56,7 +56,8 @@ export function buildLatchedTx(input: LatchedTxInput): FrameTransaction {
     }),
     frame("VERIFY", {
       target: null,
-      execution: 70_000n,
+      // The accounts read their own SENDER frames (FrameIntrospection), which costs a few helper calls per frame.
+      execution: 200_000n,
       data: triggerData,
       scope: "EXECUTION_AND_PAYMENT",
     }),

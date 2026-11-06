@@ -73,7 +73,7 @@ contract LatchTest is TestBase {
 
     function testAttest() public {
         vm.prank(OWNER);
-        latch.ping(EVENT);
+        latch.open(EVENT, 1100);
         vm.warp(1050);
         vm.prank(ORACLE);
         latch.attest(EVENT, true);
@@ -82,7 +82,7 @@ contract LatchTest is TestBase {
 
     function testAttestLate() public {
         vm.prank(OWNER);
-        latch.ping(EVENT);
+        latch.open(EVENT, 1100);
         vm.warp(1101);
         vm.startPrank(ORACLE);
         vm.expectRevert(Latch.DeadlinePassed.selector);
@@ -92,7 +92,7 @@ contract LatchTest is TestBase {
 
     function testAttestOnlyOracle() public {
         vm.prank(OWNER);
-        latch.ping(EVENT);
+        latch.open(EVENT, 1100);
         vm.warp(1050);
         vm.startPrank(OTHER);
         vm.expectRevert(Latch.NotOracle.selector);
@@ -126,7 +126,7 @@ contract LatchTest is TestBase {
 
     function testWriteOnce() public {
         vm.prank(OWNER);
-        latch.ping(EVENT);
+        latch.open(EVENT, 1100);
         vm.warp(1050);
         vm.prank(ORACLE);
         latch.attest(EVENT, false);
@@ -140,13 +140,24 @@ contract LatchTest is TestBase {
 
     function testPingAfterAttest() public {
         vm.prank(OWNER);
-        latch.ping(EVENT);
+        latch.open(EVENT, 1100);
         vm.warp(1050);
         vm.prank(ORACLE);
         latch.attest(EVENT, true);
         vm.startPrank(OWNER);
-        vm.expectRevert(Latch.Settled.selector);
+        vm.expectRevert(Latch.Locked.selector);
         latch.ping(EVENT);
+        vm.stopPrank();
+    }
+
+    /// A heartbeat event can only end in EXPIRED; the oracle cannot settle it.
+    function testAttestHeartbeatRejected() public {
+        vm.prank(OWNER);
+        latch.ping(EVENT);
+        vm.warp(1050);
+        vm.startPrank(ORACLE);
+        vm.expectRevert(Latch.NotFixed.selector);
+        latch.attest(EVENT, true);
         vm.stopPrank();
     }
 }

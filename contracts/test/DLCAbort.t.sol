@@ -24,6 +24,8 @@ contract DLCAbortTest is TestBase {
             BOB,
             latch,
             EVENT,
+            1 ether,
+            1 ether,
             0.99 ether,
             0.99 ether,
             0.02 ether,
@@ -266,5 +268,40 @@ contract DLCAbortTest is TestBase {
             EVENT,
             4
         );
+    }
+
+    /// An ABORT cheque without the markAborted self-call, or with any other SENDER frame acting as the
+    /// account, is refused.
+    function testAbortWithoutMarkRejected() public {
+        fundAlice();
+        uint8 abortTag = account.ABORT_TAG();
+        vm.expectRevert(DLCAccount.MissingAbortMark.selector);
+        account.verifyShape(ALICE, 1.02 ether, address(latch), EVENT, abortTag, false);
+    }
+
+    /// After an abort each party pulls back exactly its own deposit, including a partial one.
+    function testClaimAfterAbort() public {
+        fundAlice();
+        vm.deal(BOB, 10 ether);
+        vm.prank(BOB);
+        account.deposit{value: 0.4 ether}();
+        vm.prank(address(account));
+        account.markAborted();
+
+        vm.prank(BOB);
+        account.claim();
+        assertEq(BOB.balance, 10 ether);
+        vm.prank(ALICE);
+        account.claim();
+        assertEq(ALICE.balance, 10 ether);
+        assertEq(account.deposits(ALICE), 0);
+    }
+
+    function testClaimBeforeAbort() public {
+        fundAlice();
+        vm.startPrank(ALICE);
+        vm.expectRevert(DLCAccount.NotAborted.selector);
+        account.claim();
+        vm.stopPrank();
     }
 }

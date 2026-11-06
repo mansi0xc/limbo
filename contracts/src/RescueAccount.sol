@@ -6,13 +6,17 @@ import {Devnet} from "@forshtat/hegota-support/contracts/Devnet.sol";
 import {Scope, SigParam} from "@forshtat/hegota-support/contracts/Params.sol";
 import {ILatch} from "./interfaces/ILatch.sol";
 import {IStakingRegistry} from "./interfaces/IStakingRegistry.sol";
+import {FrameIntrospection} from "./lib/FrameIntrospection.sol";
 
 /// A pre-committed rescue account. The owner's signature is checked by the protocol; the VERIFY frame
-/// only has to confirm that the resolved signer is the owner, that the shared latch is EXPIRED, and
-/// that the account still has room for the rescue plus gas.
+/// only has to confirm that the resolved signer is the owner, that the shared latch is EXPIRED, that
+/// the account still has room for the rescue plus gas, and that the rescue marks itself as paid.
+///
+/// The owner can withdraw at any time except while a rescue is pending: once the latch is EXPIRED the
+/// balance is reserved for the rescue until the rescue lands, then the owner can sweep what is left.
 ///
 /// The account is staked: the alt-mempool admits its foreign latch read; the canonical mempool does not.
-contract RescueAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
+contract RescueAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP), FrameIntrospection {
     address public immutable owner;
     address public immutable beneficiary;
     ILatch public immutable latch;
@@ -21,10 +25,14 @@ contract RescueAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
     uint256 public immutable gasBuffer;
     address public immutable stakingRegistry;
 
+    bool public rescued;
+
     error BadTrigger();
     error NotExpired();
     error BadSigner();
     error NoRoom();
+    error MissingRescueMark();
+    error RescuePending();
 
     modifier onlyOwner() {
         require(msg.sender == owner, "not owner");
@@ -66,7 +74,8 @@ contract RescueAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
             address(this).balance,
             latch_,
             eventId_,
-            expectedTag
+            expectedTag,
+            _senderFrames(this.markRescued.selector).hasMark
         );
         approve(Scope.EXECUTION_AND_PAYMENT);
     }
@@ -78,22 +87,32 @@ contract RescueAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
         uint256 balance,
         address latch_,
         bytes32 eventId_,
-        uint8 expectedTag
+        uint8 expectedTag,
+        bool hasMark
     ) internal view {
         if (msg0 != 0) revert BadSigner();
         if (expectedTag != uint8(ILatch.State.EXPIRED)) revert BadTrigger();
         if (latch_ != address(latch) || eventId_ != eventId) revert BadTrigger();
         if (latchState != expectedTag) revert NotExpired();
         if (signer != owner) revert BadSigner();
+        if (!hasMark) revert MissingRescueMark();
         if (balance < rescueAmount + gasBuffer) revert NoRoom();
+    }
+
+    /// Called by the account itself from the rescue cheque's SENDER frame.
+    function markRescued() external {
+        require(msg.sender == address(this), "self");
+        rescued = true;
     }
 
     function stake(uint32 delay) external payable onlyOwner {
         IStakingRegistry(stakingRegistry).addStake{value: msg.value}(delay);
     }
 
+    /// Any state but "EXPIRED and the rescue has not landed yet". The oracle or another settlement can
+    /// therefore never freeze the owner's funds, and leftovers after the rescue can be swept.
     function withdraw() external onlyOwner {
-        require(latch.state(eventId) == ILatch.State.UNSET, "settled");
+        if (latch.state(eventId) == ILatch.State.EXPIRED && !rescued) revert RescuePending();
         (bool ok,) = owner.call{value: address(this).balance}("");
         require(ok, "withdraw");
     }

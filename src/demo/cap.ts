@@ -1,7 +1,7 @@
 import { config } from "../config.js";
 import { buildLatchedTx, signLatchedTx } from "../frameTx/build.js";
 import type { Trigger } from "../park/types.js";
-import { nodeStatus, park } from "../sign.js";
+import { nodeStatus, park, selfCall } from "../sign.js";
 import { requireState } from "../state.js";
 
 async function main(): Promise<void> {
@@ -20,6 +20,7 @@ async function main(): Promise<void> {
       signers: [requireState("owner")],
       trigger,
       expiry: BigInt(requireState("rescueExpiry")),
+      calls: [selfCall(requireState("rescueAccount"), "RescueAccount", "markRescued")],
       payouts: [{ to: requireState("beneficiary"), value: config.rescue.amount }],
       nonceKey: BigInt(i),
       nonceSeq: 0n,
