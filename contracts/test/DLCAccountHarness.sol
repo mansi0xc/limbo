@@ -19,12 +19,14 @@ contract DLCAccountHarness is DLCAccount {
     function verify(
         address signer0,
         address signer1,
+        uint256 msg0,
+        uint256 msg1,
         uint8 latchState,
         uint256 balance,
         address latch_,
         bytes32 eventId_,
         uint8 expectedTag
     ) external view {
-        _verify(signer0, signer1, latchState, balance, latch_, eventId_, expectedTag);
+        _verify(signer0, signer1, msg0, msg1, latchState, balance, latch_, eventId_, expectedTag);
     }
 }

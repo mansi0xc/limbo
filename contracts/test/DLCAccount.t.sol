@@ -75,30 +75,42 @@ contract DLCAccountTest is TestBase {
 
     function testYesPasses() public {
         fundBoth();
-        account.verify(ALICE, BOB, uint8(ILatch.State.YES), 2 ether, address(latch), EVENT, uint8(ILatch.State.YES));
+        account.verify(ALICE, BOB, 0, 0, uint8(ILatch.State.YES), 2 ether, address(latch), EVENT, uint8(ILatch.State.YES));
     }
 
     function testYesOneSigner() public {
         fundBoth();
         vm.expectRevert(DLCAccount.BadSigner.selector);
-        account.verify(ALICE, address(0), uint8(ILatch.State.YES), 2 ether, address(latch), EVENT, uint8(ILatch.State.YES));
+        account.verify(ALICE, address(0), 0, 0, uint8(ILatch.State.YES), 2 ether, address(latch), EVENT, uint8(ILatch.State.YES));
     }
 
     function testWrongTag() public {
         fundBoth();
         vm.expectRevert(DLCAccount.BadState.selector);
-        account.verify(ALICE, BOB, uint8(ILatch.State.YES), 2 ether, address(latch), EVENT, uint8(ILatch.State.NO));
+        account.verify(ALICE, BOB, 0, 0, uint8(ILatch.State.YES), 2 ether, address(latch), EVENT, uint8(ILatch.State.NO));
     }
 
     function testNotFunded() public {
         vm.expectRevert(DLCAccount.NotFunded.selector);
-        account.verify(ALICE, BOB, uint8(ILatch.State.YES), 2 ether, address(latch), EVENT, uint8(ILatch.State.YES));
+        account.verify(ALICE, BOB, 0, 0, uint8(ILatch.State.YES), 2 ether, address(latch), EVENT, uint8(ILatch.State.YES));
     }
 
     function testNoPayoutRoom() public {
         fundBoth();
         vm.expectRevert(DLCAccount.NoRoom.selector);
-        account.verify(ALICE, BOB, uint8(ILatch.State.YES), 1.5 ether, address(latch), EVENT, uint8(ILatch.State.YES));
+        account.verify(ALICE, BOB, 0, 0, uint8(ILatch.State.YES), 1.5 ether, address(latch), EVENT, uint8(ILatch.State.YES));
+    }
+
+    function testNonCanonicalMsg() public {
+        fundBoth();
+        vm.expectRevert(DLCAccount.BadSigner.selector);
+        account.verify(ALICE, BOB, 1, 0, uint8(ILatch.State.YES), 2 ether, address(latch), EVENT, uint8(ILatch.State.YES));
+    }
+
+    function testNonCanonicalSecondMsg() public {
+        fundBoth();
+        vm.expectRevert(DLCAccount.BadSigner.selector);
+        account.verify(ALICE, BOB, 0, 1, uint8(ILatch.State.YES), 2 ether, address(latch), EVENT, uint8(ILatch.State.YES));
     }
 
     function testRefund() public {
@@ -106,6 +118,8 @@ contract DLCAccountTest is TestBase {
         account.verify(
             ALICE,
             BOB,
+            0,
+            0,
             uint8(ILatch.State.EXPIRED),
             2.02 ether,
             address(latch),
@@ -120,6 +134,8 @@ contract DLCAccountTest is TestBase {
         account.verify(
             ALICE,
             BOB,
+            0,
+            0,
             uint8(ILatch.State.EXPIRED),
             2 ether - 1,
             address(latch),
@@ -137,6 +153,8 @@ contract DLCAccountTest is TestBase {
         account.verify(
             ALICE,
             BOB,
+            0,
+            0,
             uint8(ILatch.State.EXPIRED),
             2.02 ether,
             address(latch),

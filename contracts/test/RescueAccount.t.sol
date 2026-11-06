@@ -19,13 +19,14 @@ contract RescueAccountHarness is RescueAccount {
 
     function verify(
         address signer,
+        uint256 msg0,
         uint8 latchState,
         uint256 balance,
         address latch_,
         bytes32 eventId_,
         uint8 expectedTag
     ) external view {
-        _verify(signer, latchState, balance, latch_, eventId_, expectedTag);
+        _verify(signer, msg0, latchState, balance, latch_, eventId_, expectedTag);
     }
 }
 
@@ -53,28 +54,34 @@ contract RescueAccountTest is TestBase {
     }
 
     function testExpiredPasses() public view {
-        account.verify(OWNER, uint8(ILatch.State.EXPIRED), 1 ether, address(latch), EVENT, uint8(ILatch.State.EXPIRED));
+        account.verify(OWNER, 0, uint8(ILatch.State.EXPIRED), 1 ether, address(latch), EVENT, uint8(ILatch.State.EXPIRED));
     }
 
     function testWrongSigner() public {
         vm.expectRevert(RescueAccount.BadSigner.selector);
-        account.verify(OTHER, uint8(ILatch.State.EXPIRED), 1 ether, address(latch), EVENT, uint8(ILatch.State.EXPIRED));
+        account.verify(OTHER, 0, uint8(ILatch.State.EXPIRED), 1 ether, address(latch), EVENT, uint8(ILatch.State.EXPIRED));
+    }
+
+    function testNonCanonicalMsg() public {
+        vm.expectRevert(RescueAccount.BadSigner.selector);
+        account.verify(OWNER, 1, uint8(ILatch.State.EXPIRED), 1 ether, address(latch), EVENT, uint8(ILatch.State.EXPIRED));
     }
 
     function testWrongTag() public {
         vm.expectRevert(RescueAccount.BadTrigger.selector);
-        account.verify(OWNER, uint8(ILatch.State.NO), 1 ether, address(latch), EVENT, uint8(ILatch.State.NO));
+        account.verify(OWNER, 0, uint8(ILatch.State.NO), 1 ether, address(latch), EVENT, uint8(ILatch.State.NO));
     }
 
     function testWrongLatch() public {
         vm.expectRevert(RescueAccount.BadTrigger.selector);
-        account.verify(OWNER, uint8(ILatch.State.EXPIRED), 1 ether, address(0xDEAD), EVENT, uint8(ILatch.State.EXPIRED));
+        account.verify(OWNER, 0, uint8(ILatch.State.EXPIRED), 1 ether, address(0xDEAD), EVENT, uint8(ILatch.State.EXPIRED));
     }
 
     function testWrongEvent() public {
         vm.expectRevert(RescueAccount.BadTrigger.selector);
         account.verify(
             OWNER,
+            0,
             uint8(ILatch.State.EXPIRED),
             1 ether,
             address(latch),
@@ -85,12 +92,12 @@ contract RescueAccountTest is TestBase {
 
     function testPreExpiry() public {
         vm.expectRevert(RescueAccount.NotExpired.selector);
-        account.verify(OWNER, uint8(ILatch.State.UNSET), 1 ether, address(latch), EVENT, uint8(ILatch.State.EXPIRED));
+        account.verify(OWNER, 0, uint8(ILatch.State.UNSET), 1 ether, address(latch), EVENT, uint8(ILatch.State.EXPIRED));
     }
 
     function testNoRoom() public {
         vm.expectRevert(RescueAccount.NoRoom.selector);
-        account.verify(OWNER, uint8(ILatch.State.EXPIRED), 0.1 ether, address(latch), EVENT, uint8(ILatch.State.EXPIRED));
+        account.verify(OWNER, 0, uint8(ILatch.State.EXPIRED), 0.1 ether, address(latch), EVENT, uint8(ILatch.State.EXPIRED));
     }
 
     function testWithdrawOnlyOwner() public {

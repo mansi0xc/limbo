@@ -8,7 +8,7 @@ export const config = {
   explorerUrl: "https://explorer.altmempool.wtf/",
 
   stakingRegistry: "0xd51c04d7a0b01124e84de152f4e56d9eecb22d2f" as Address,
-  expiryVerifier: "0x81413f0cF12e9b6a49B1D0439E081c577D57FfFf" as Address,
+  expiryVerifier: "0x0000000000000000000000000000000000008141" as Address,
 
   stateFile: path.resolve(".trellis-state.json"),
 
@@ -17,7 +17,7 @@ export const config = {
   minStake: parseEther("0.01"),
 
   maxFeePerGas: parseGwei("2"),
-  legacyGasPrice: parseGwei("0.002"),
+  legacyGasPrice: parseGwei("2"),
   legacyGasLimit: 250_000n,
   deployGasLimit: 6_000_000n,
   txTimeoutSec: 180,
@@ -39,7 +39,7 @@ export const config = {
     payoutA: parseEther("0.099"),
     payoutB: parseEther("0.099"),
     gasBuffer: parseEther("0.002"),
-    deadlineSeconds: 180n,
+    deadlineSeconds: 900n,
     grace: 10n,
   },
 

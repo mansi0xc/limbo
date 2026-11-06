@@ -61,6 +61,7 @@ contract RescueAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
         (address latch_, bytes32 eventId_, uint8 expectedTag) = abi.decode(msg.data, (address, bytes32, uint8));
         _verify(
             address(uint160(sigparam(0, SigParam.RESOLVED_SIGNER))),
+            sigparam(0, SigParam.MSG),
             uint8(latch.state(eventId)),
             address(this).balance,
             latch_,
@@ -72,12 +73,14 @@ contract RescueAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
 
     function _verify(
         address signer,
+        uint256 msg0,
         uint8 latchState,
         uint256 balance,
         address latch_,
         bytes32 eventId_,
         uint8 expectedTag
     ) internal view {
+        if (msg0 != 0) revert BadSigner();
         if (expectedTag != uint8(ILatch.State.EXPIRED)) revert BadTrigger();
         if (latch_ != address(latch) || eventId_ != eventId) revert BadTrigger();
         if (latchState != expectedTag) revert NotExpired();

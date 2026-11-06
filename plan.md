@@ -6,18 +6,19 @@ A working EF Frame Transaction Alt Mempool submission with:
 
 1. **PARK-010…080** — a rule draft for latch-triggered parked transactions.
 2. **A reference park node** — two nodes, template admission, tag-indexed promotion, zero-simulation
-   eviction of losers, and a live per-trigger cap.
+   eviction, and a live per-trigger cap.
 3. **A nobody-online workload** — a deadman rescue that lands after the owner stops pinging.
-4. **A binary DLC** — one shared EIP-8250 key, YES/NO/EXPIRED latch, sibling eviction, losing values
-   invalid once the winner lands.
-5. **A live demo** on devnet 1337 with explorer links, admission records, and measured validation gas.
+4. **A binary DLC** — one shared EIP-8250 key, YES/NO/EXPIRED latch, sibling eviction, and an abort
+   refund.
+5. **A live demo** on devnet 1337 with explorer links, admission records, and measured validation
+   gas.
 
 ## Non-goals
 
-- Numeric or ZK DLCs, many-bucket outcome spaces, and per-bucket keyed cheques.
+- Numeric or ZK DLCs and per-bucket cheques.
 - Q-Day or post-quantum vaults as the main story.
-- A second track or a second product line.
-- A staked settlement paymaster (optional stretch, not part of the main build).
+- A second track.
+- A settlement paymaster.
 - Any claim of production readiness, audit status, or privacy.
 
 ## Architecture
@@ -27,311 +28,201 @@ A working EF Frame Transaction Alt Mempool submission with:
 ```
 [ expiry_verify(deadline),
   self_verify(trigger),
-  sender(payout 1),
-  sender(payout 2) ]
+  ...calls,
+  ...payouts ]
 ```
 
 - `expiry_verify` binds the upper bound.
-- `self_verify` targets the account. Its data is
+- `self_verify` targets the staked account. Its data is
   `abi.encode(latch, eventId, expectedTag)`, signed by the parties.
-- The account reads the latch state, checks the signers and the tag, checks the payout room, and calls
+- The account reads the shared latch, checks the signers and tag, checks the payout room, and calls
   `approve(EXECUTION_AND_PAYMENT)`.
-- The `sender` frames pay the beneficiary or the DLC parties.
-
-The account is staked. The alt-mempool admits its foreign latch read; the canonical mempool does not.
+- The `sender` frames pay the beneficiary or the DLC parties and can mark an abort.
 
 ### One shared nonce key
 
 All mutually exclusive cheques use one EIP-8250 key `K` at sequence 0. The first promoted cheque
-consumes `K`; the other values are invalid. There is no `settled` flag: `self_verify` is a STATICCALL
-and cannot write. The key is the exclusion mechanism.
+consumes `K`; the other values become invalid. There is no `settled` flag: `self_verify` is a
+STATICCALL and cannot write. The key is the exclusion mechanism.
 
 ### Two-node park layer
 
-- Node A accepts a signed cheque and gossips it to node B.
+- Node A accepts and gossips.
 - Node B independently runs the same admission checks and the same caps.
-- The per-trigger cap is live: node B rejects entry P+1, not just a batch overflow.
+- Both enforce the live per-trigger cap; node B rejects entry `P+1`.
 - When the latch changes, the matching entry is promoted; the rest are evicted without simulation.
-- The promoted transaction goes to the alt-mempool gateway; the receipt and the gas are recorded.
+- The promoted bytes go to the alt-mempool gateway; the receipt and gas are recorded.
 
 ### Workloads
 
-- **Deadman rescue** — `Latch` with an owner heartbeat; `RescueAccount` with a beneficiary; a
-  pre-signed `EXPIRED` rescue; the owner goes offline; `expire` trips the latch; the rescue promotes.
+- **Deadman rescue** — `Latch` with a heartbeat; `RescueAccount` with a beneficiary; a pre-signed
+  `EXPIRED` rescue; the owner goes offline; `expire` trips the latch; the rescue promotes.
 - **Binary DLC** — `DLCAccount` with two parties and a shared key; `CET_YES`, `CET_NO`,
   `CET_REFUND`; the oracle attests; the matching cheque promotes; the siblings are invalid; the
   refund after `expire`; the abort refund for one-sided funding.
 
-## Repo layout
+## Implemented files
 
 ```
-trellis/
-  idea.md
-  plan.md
-  README.md
-  package.json
-  tsconfig.json
-  foundry.toml
-  .gitignore
-  contracts/
-    src/
-      Latch.sol
-      RescueAccount.sol
-      DLCAccount.sol
-      interfaces/ILatch.sol
-    test/
-      Latch.t.sol
-      RescueAccount.t.sol
-      DLCAccount.t.sol
-  src/
-    config.ts
-    state.ts
-    frameTx/
-      build.ts
-      send.ts
-      codec.ts
-      profile.ts
-      types.ts
-      predeploys.ts
-    contracts.ts
-    deploy.ts
-    sign.ts
-    park/
-      types.ts
-      admission.ts
-      store.ts
-      indexer.ts
-      promoter.ts
-      gossip.ts
-      node.ts
-    demo/
-      deadman.ts
-      dlc.ts
-      cap.ts
-    measure.ts
-  test/
-    admission.test.ts
-    store.test.ts
-  docs/
-    park-rule.md
-    demo-runbook.md
-  scripts/
-    demo-deadman.sh
-    demo-dlc.sh
-    demo-cap.sh
+contracts/src/Latch.sol
+contracts/src/RescueAccount.sol
+contracts/src/DLCAccount.sol
+contracts/src/interfaces/ILatch.sol
+contracts/src/interfaces/IStakingRegistry.sol
+contracts/test/Latch.t.sol
+contracts/test/RescueAccount.t.sol
+contracts/test/DLCAccount.t.sol
+contracts/test/DLCAccountHarness.sol
+contracts/test/DLCAbort.t.sol
+
+src/config.ts
+src/state.ts
+src/rpc.ts
+src/chain.ts
+src/contracts.ts
+src/frameTx/profile.ts
+src/frameTx/types.ts
+src/frameTx/codec.ts
+src/frameTx/wire.ts
+src/frameTx/build.ts
+src/frameTx/send.ts
+src/frameTx/predeploys.ts
+src/park/types.ts
+src/park/store.ts
+src/park/admission.ts
+src/park/templates.ts
+src/park/reader.ts
+src/park/indexer.ts
+src/park/promoter.ts
+src/park/gossip.ts
+src/park/node.ts
+src/sign.ts
+src/cheques.ts
+src/parkClient.ts
+src/deploy.ts
+src/demo/deadman.ts
+src/demo/dlc.ts
+src/demo/cap.ts
+src/measure.ts
+
+test/admission.test.ts
+test/store.test.ts
+
+docs/park-rule.md
+docs/demo-runbook.md
+README.md
 ```
 
-## Milestones
+## Milestones and commit checkpoints
+
+Each checkpoint is a reviewable commit. The maintainer commits; the automation does not.
 
 ### M0 — project docs
 
-- `idea.md`: the product, the PARK rule, the two workloads, the limits, the prior art.
-- `plan.md`: this plan.
-
-**Commit checkpoint:** `docs: add Trellis idea and build plan`
+`docs: add Trellis idea and build plan` — `idea.md`, `plan.md`.
 
 ### M1 — scaffold
 
-- `package.json`: `build:contracts`, `deploy`, `sign`, `park:a`, `park:b`, `demo:deadman`,
-  `demo:dlc`, `demo:cap`, `measure`, `test`, `typecheck`.
-- `tsconfig.json`, `foundry.toml`, `.gitignore`.
-- `src/config.ts`: chain 1337, gateway/root/explorer, staking registry,
-  `EXPIRY_VERIFIER` `0x81413f0cF12e9b6a49B1D0439E081c577D57FfFf`, stake 0.012 ETH, unstake 86400,
-  deploy gas 6M, maxFeePerGas 2 gwei, caps `P=4`/`E=8`, ports 8787/8788.
-- `src/frameTx/*`: the minimal codec/build/send/profile/types/predeploys layer from the workshop.
-- `src/state.ts`: a JSON state file for keys, addresses, and hashes (gitignored).
-
-**Commit checkpoint:** `chore: scaffold trellis package, foundry, and devnet config`
+`chore: scaffold trellis package, foundry, and devnet config` — `package.json`, `yarn.lock`,
+`tsconfig.json`, `foundry.toml`, `.gitignore`, `scripts/export-artifacts.mjs`, `src/config.ts`,
+`src/state.ts`, `src/rpc.ts`, `src/chain.ts`, `src/contracts.ts`, `src/frameTx/`.
 
 ### M2 — contracts
 
-Use Solidity inheriting `HegotaSupport(Devnet.ERC8421_WORKSHOP)`. No raw Yul: `HegotaSupport`
-exposes `sigparam`, `framedataload`, `txparam`, `frameparam`, and `approve`.
+`feat(contracts): add tri-state latch, rescue, and DLC accounts` — `contracts/src/`.
 
-#### `Latch.sol`
+### M3 — contract tests
 
-- `enum State { UNSET, YES, NO, EXPIRED }`.
-- `mapping(bytes32 => State) public state;`
-- `mapping(bytes32 => uint64) public deadline;`
-- `address public immutable owner;`
-- `address public immutable oracle;`
-- `uint64 public immutable interval;`
-- `uint64 public constant GRACE = 120;`
-- `constructor(address owner_, address oracle_, uint64 interval_)`.
-- `ping(bytes32 eventId)` — only owner; only if `state == UNSET`; `deadline = block.timestamp + interval`.
-- `attest(bytes32 eventId, bool yes)` — only oracle; `state == UNSET`; `block.timestamp <= deadline`;
-  set `YES` or `NO`.
-- `expire(bytes32 eventId)` — permissionless; `state == UNSET`; `block.timestamp > deadline + GRACE`;
-  set `EXPIRED`.
-- `stateOf(bytes32)`, `deadlineOf(bytes32)`.
-- Write-once: every transition requires `UNSET`; no setter, no proxy, no admin.
+`test(contracts): cover latch, rescue, DLC, and payout room` — `contracts/test/`.
 
-#### `RescueAccount.sol`
+### M4 — park admission
 
-- `address public immutable owner; address public immutable beneficiary; Latch public immutable latch;
-  bytes32 public immutable eventId; uint256 public immutable rescueAmount;
-  uint256 public immutable gasBuffer;`
-- `fallback()`:
-  - decode `(address latch_, bytes32 eventId_, uint8 expectedTag)` from `msg.data`;
-  - `require(latch_ == address(latch) && eventId_ == eventId)`;
-  - `require(uint8(latch.state(eventId)) == expectedTag)`; the rescue uses `EXPIRED`;
-  - `require(address(uint160(sigparam(0, SigParam.RESOLVED_SIGNER))) == owner)`;
-  - `require(address(this).balance >= rescueAmount + gasBuffer)`;
-  - `approve(Scope.EXECUTION_AND_PAYMENT)`.
-- `withdraw()` — owner-only ordinary transaction before the latch; sends the balance to the owner.
-  Optional; the demo owner is offline.
-- Funded through the creation value, not a plain transfer (the fallback would run).
-- The rescue `SENDER` frame pays `beneficiary` the `rescueAmount`; the account keeps `gasBuffer`.
+`feat(park): add reference park node with template admission` — `src/park/types.ts`,
+`src/park/store.ts`, `src/park/admission.ts`, `src/park/templates.ts`, `src/park/reader.ts`,
+`test/admission.test.ts`, `test/store.test.ts`.
 
-#### `DLCAccount.sol`
+### M5 — two nodes and cap
 
-- `address public immutable alice; address public immutable bob; Latch public immutable latch;
-  bytes32 public immutable eventId; uint256 public immutable payoutA; uint256 public immutable payoutB;
-  uint256 public immutable gasBuffer;`
-- `mapping(address => uint256) public deposits; bool public bothFunded;`
-- `deposit()` payable — records `deposits[msg.sender]`; recomputes `bothFunded`.
-- `stake(uint32 delay)` — only Alice; calls the staking registry with the account's stake value.
-- `fallback()`:
-  - decode `(address latch_, bytes32 eventId_, uint8 expectedTag)` from `msg.data`;
-  - `require(latch_ == address(latch) && eventId_ == eventId)`;
-  - `require(uint8(latch.state(eventId)) == expectedTag)`;
-  - `require(address(uint160(sigparam(0, SigParam.RESOLVED_SIGNER))) == alice)`;
-  - `require(address(uint160(sigparam(1, SigParam.RESOLVED_SIGNER))) == bob)`;
-  - `require(address(this).balance >= payoutA + payoutB + gasBuffer)` for outcome cheques;
-  - `approve(Scope.EXECUTION_AND_PAYMENT)`.
-- `CET_YES`/`CET_NO` use `payoutA`/`payoutB`; `CET_REFUND` uses the recorded deposits and is valid if
-  `state == EXPIRED || !bothFunded` (abort refund).
-- The housekeeping path (`msg.data.length == 0`) allows `stake`/`ping`/`deposit` with Alice's
-  signature only; the cheques always carry trigger data and require both signatures.
-- One shared key `K` for all cheques; `nonceKeys: [K]`, `nonceSeq: 0`. Housekeeping uses the legacy
-  nonce.
+`feat(park): add two-node gossip and live per-trigger cap` — `src/park/indexer.ts`,
+`src/park/promoter.ts`, `src/park/gossip.ts`, `src/park/node.ts`, `src/demo/cap.ts`.
 
-#### Foundry tests
+### M6 — demos
 
-- `Latch.t.sol`: oracle-only, write-once, `attest` before deadline, `expire` after grace, `ping`.
-- `RescueAccount.t.sol`: wrong signer, wrong tag, wrong latch, expired passes, pre-expiry fails.
-- `DLCAccount.t.sol`: both signers, one signer fails, wrong tag, solvency, abort refund, deposit
-  records.
-- Use `vm.warp`; no devnet dependency.
+`feat(demo): add deadman, DLC, and cap scenarios` — `src/cheques.ts`, `src/parkClient.ts`,
+`src/sign.ts`, `src/deploy.ts`, `src/demo/deadman.ts`, `src/demo/dlc.ts`, `src/demo/cap.ts`,
+`src/measure.ts`.
 
-**Commit checkpoint:** `feat(contracts): add tri-state latch, rescue, and DLC accounts`
-**Commit checkpoint:** `test(contracts): cover latch, rescue, DLC, and payout room`
+### M7 — docs
 
-### M3 — two-node park layer
+`docs: add PARK rule draft, README, and demo runbook` — `README.md`, `docs/park-rule.md`,
+`docs/demo-runbook.md`, `idea.md`, `plan.md`.
 
-#### Admission
+### M8 — final
 
-`validate(tx, trigger)` checks, without trusting the sender and without state overrides:
+`chore: final submission notes` — the final verification notes and any remaining edits.
 
-1. **Template binding** — `tx.sender` code hash is in the allow-list (`RescueAccount`, `DLCAccount`);
-   the trigger's latch is the account's `latch`; the `eventId` matches.
-2. **Trigger declaration** — decode `(latch, eventId, expectedTag)` from the signed `self_verify`
-   frame data; it must equal the declared trigger.
-3. **Signatures** — recompute the signature hash; recover `sig[0]`/`sig[1]`; check against the
-   account's `owner` (rescue) or `alice`/`bob` (DLC).
-4. **Latch unset** — `latch.state(eventId) == UNSET` at admission.
-5. **Staked sender** — `getStake(tx.sender).amount >= minStake` and `withdrawTime == 0`.
-6. **Expiry** — an `expiry_verify` frame is present and its deadline is in the future.
-7. **Caps** — per-entity cap `E=8` and per-trigger cap `P=4`; reject P+1.
-8. **Sibling policy** — cheques that share `(sender, key, seq)` form a sibling group; the park store
-   may hold them together; the live mempool only ever gets the promoted one.
+### M9 — optional dashboard
 
-#### Store
+The dashboard is a demo surface, not the protocol contribution. It is served by the park node as
+static files; no new frontend framework.
 
-- Map `id -> ParkedEntry { tx, trigger, signers, deadline, codeHash, status, receivedAt }`.
-- Index `triggerKey(latch,eventId,expectedTag) -> Set<id>`.
-- `countByTrigger(trigger)`, `countByEntity(sender)`.
-- `siblings(sender,key,seq)`.
-- Evict losers on a latch flip; promote matches; no simulation for losers.
-
-#### Node
-
-- HTTP server: `POST /park` (tx + trigger), `GET /status`, `GET /health`.
-- Node A (8787) accepts from the demo; node B (8788) receives `/park` gossip.
-- Node B runs `validate` independently and enforces the per-trigger cap; returns `accepted` or
-  `rejected` with the rule id.
-- Indexer polls `latch.state(eventId)` every 1s; on change, promotes entries whose `expectedTag`
-  matches in fee order; evicts the rest with zero simulation; promotes once per sibling group.
-- Promoter calls the gateway, waits for the receipt, and records the explorer link and the gas from
-  `frameReceipts[0].gasUsed`.
-
-**Commit checkpoint:** `feat(park): add reference park node with template admission`
-**Commit checkpoint:** `feat(park): add two-node gossip and live per-trigger cap`
-
-### M4 — demo scripts
-
-#### Deadman
-
-1. Deploy `Latch` (owner, oracle, interval 120s), `RescueAccount` (owner, beneficiary, latch, eventId,
-   rescueAmount, gasBuffer); fund and stake the account; `ping`.
-2. Build the rescue with `[expiry_verify(deadline), self_verify(trigger = EXPIRED),
-   SENDER(beneficiary, rescueAmount)]`; sign with the owner; start node A and node B; park.
-3. The owner stops pinging; wait for the interval plus grace; call `expire`; both nodes see
-   `EXPIRED`; promote; the beneficiary is paid.
-4. Show the same bytes rejected before `expire`; print the explorer link, the receipt, and the gas.
-
-#### DLC
-
-1. Deploy `Latch` (oracle), `DLCAccount` (alice, bob, latch, eventId, payoutA, payoutB, gasBuffer);
-   deposit 1 ETH each; stake.
-2. Build `CET_YES`, `CET_NO`, and `CET_REFUND` with the shared key `K`; two signatures each; park all
-   three.
-3. The oracle attests `NO`; node A promotes `NO`; `YES` and `REFUND` are evicted; the sidecar admits
-   `NO`; Bob is paid; `K` is consumed; a resubmitted `YES` or `REFUND` is rejected.
-4. A second account with no attestation: the deadline passes; `expire`; `REFUND`; split.
-5. Show the sibling eviction with zero simulation and the loser invalid.
-
-#### Cap
-
-1. Park `P=4` entries for one trigger; node B rejects `P+1` with `PARK-050`.
-2. Show node A and node B both enforce the cap; the rejected entry is not in the store.
-3. Show the per-entity cap separately.
-
-**Commit checkpoint:** `feat(demo): add deadman, DLC, and cap scenarios`
-
-### M5 — measurement and docs
-
-- `src/measure.ts`: call `ethrex_simulateFrameTransaction` on the root URL and read the receipt's
-  `frameReceipts[0].gasUsed`; record validation gas, inclusion block, and attest-to-inclusion
-  latency. Never read gas from the admission report.
-- `docs/park-rule.md`: PARK-010…080; template binding; caps; sibling exception; indexing; gossip;
-  privacy cost; limits.
-- `README.md`: the one-liner, the demo, the rule, the limits, the commands, and the devnet.
-- `docs/demo-runbook.md`: exact commands and expected outputs.
-
-**Commit checkpoint:** `docs: add PARK rule draft and demo runbook`
-**Commit checkpoint:** `chore: final submission notes`
+- **C40** `feat(web): add the static dashboard shell` — `web/index.html`, `web/style.css`,
+  `web/app.js`, and the park node static serve + `/state` endpoint; fixture mode for the frozen
+  devnet.
+- **C41** `feat(web): show the two-node cap and sibling eviction` — the A/B panels, `P=4`, `P+1`,
+  the DLC YES/NO/REFUND siblings, the promotion receipt, and the gas.
+- **C42** `docs: add the dashboard runbook` — `docs/dashboard.md`.
 
 ## Verification
 
-- `forge test --root contracts` — all contract tests pass.
-- `npm test` — admission, store, cap, and sibling tests pass.
-- `npm run deploy` — latch and accounts deployed and staked; addresses in `.trellis-state.json`.
-- `npm run demo:deadman` — rescue promotes only after `expire`; beneficiary paid; explorer link.
-- `npm run demo:dlc` — `NO` promotes; `YES` and `REFUND` rejected; sibling eviction; explorer link.
-- `npm run demo:cap` — `P+1` rejected by node B; the cap is visible.
-- `npm run measure` — gas from the receipt or simulation; latency; no estimates.
-- Confirm the same signed bytes are rejected before the trigger and accepted after.
-- Confirm the losing cheque is invalid and the winner pays.
-- Confirm the two-node template check and the per-trigger cap are live.
+Local:
+
+- `yarn build:contracts` — compile and export artifacts.
+- `yarn typecheck` — strict TypeScript.
+- `yarn test:contracts` — 43 Foundry tests.
+- `yarn test` — 12 Vitest tests.
+- `yarn install --ignore-optional` — dependencies.
+
+Live, when the devnet is advancing:
+
+- `yarn deploy` — deploy, stake, and fund the accounts.
+- `yarn park:a` and `yarn park:b` — the two nodes.
+- `yarn demo:deadman` — the rescue is rejected before `expire`, parked, promoted after.
+- `yarn demo:dlc` — `NO` promotes; `YES` is evicted; the shared key is consumed.
+- `yarn demo:cap` — node B rejects `P+1` for one trigger.
+- `yarn measure` — gas from the receipt or `ethrex_simulateFrameTransaction`, not the admission
+  report.
+- `yarn park:a` — serves `/`; the dashboard shows the latch, the A/B entries, the cap, and the
+  promotion receipts. It can run from a fixture while the devnet is frozen.
+
+## Current status
+
+The local build is green: the contracts compile, 43 contract tests pass, 12 park tests pass, and the
+TypeScript typecheck is clean. The live deploy was attempted against the public devnet while its
+block height was frozen at block 408,262; the funding transaction is still in the pool. The deploy
+can be re-run when the devnet advances. The runbook includes the health check and the recovery
+steps.
 
 ## Risks and mitigations
 
-- **The park node is a relay.** Mitigation: two nodes, template binding, a live per-trigger cap, and
-  the rule draft. Label the node as the reference, not a sidecar feature.
-- **The DLC winner can submit later.** Mitigation: lead with the deadman trigger; keep the DLC as the
-  second workload; do not claim parking adds value for a single DLC.
-- **One-sided funding locks funds.** Mitigation: abort refund; valid when `EXPIRED || !bothFunded`.
+- **The park node is a relay.** Mitigation: two nodes, template binding, a live cap, and the rule
+  draft. Label the node as the reference, not a sidecar feature.
+- **The DLC winner can submit later.** Mitigation: lead with the deadman; keep the DLC as the second
+  workload; do not claim parking adds value for a single DLC.
+- **One-sided funding locks funds.** Mitigation: the abort tag and `markAborted`, one signature, and
+  a recorded deposit.
 - **Payout room and max cost.** Mitigation: `gasBuffer`; the account checks its balance before
-  approving; the payout frames leave the buffer.
+  approving.
 - **Fee liveness.** Mitigation: sign a high fee cap; the unused part is refunded; a fee ladder is a
   follow-up.
 - **Canonical baseline.** A single DLC or a mirrored latch can run canonically. The PARK rule is for
   shared latches, nobody-online triggers, and sibling sets.
-- **Devnet reset.** One script redeploys and re-signs; keep a backup run.
-- **Stake and minStake.** The account stakes itself with 0.012 ETH and an 86400 delay.
+- **Devnet stalls.** Mitigation: the health check, the 180s wait, and the runbook. Re-run the deploy
+  when the block advances.
+- **Stake and minStake.** The accounts stake themselves with 0.012 ETH and an 86400 delay.
 - **Validation gas.** The account validation is small; measure it; do not claim a budget break.
-- **Time.** Cut the paymaster, gossip encryption, and the numeric mode first.
+- **Frontend scope.** The dashboard is a demo surface, not the rule. Build it after the live run;
+  it must not delay the protocol proof.
 
 ## Cut order
 
@@ -341,6 +232,7 @@ Cut in this order:
 2. Gossip encryption and multi-region peers.
 3. Numeric outcome spaces.
 4. Extra demo polish.
+5. Dashboard polish.
 
 Never cut:
 
@@ -358,5 +250,6 @@ Never cut:
 - The deadman rescue is rejected before `expire` and lands after it.
 - The DLC winner lands, the losing values are invalid, and the refund works.
 - Node B rejects `P+1` for one trigger.
-- The gas comes from the receipt or the simulation, not the admission report.
+- The gas comes from the receipt or the simulation.
 - The README, runbook, and rule draft are complete.
+- The optional dashboard is available if there is time; it is not required for the live run.

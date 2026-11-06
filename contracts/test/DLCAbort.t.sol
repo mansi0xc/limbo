@@ -50,6 +50,8 @@ contract DLCAbortTest is TestBase {
         account.verify(
             ALICE,
             address(0),
+            0,
+            0,
             uint8(ILatch.State.UNSET),
             1.02 ether,
             address(latch),
@@ -65,11 +67,45 @@ contract DLCAbortTest is TestBase {
         account.verify(
             BOB,
             address(0),
+            0,
+            0,
             uint8(ILatch.State.UNSET),
             1.02 ether,
             address(latch),
             EVENT,
             account.ABORT_TAG()
+        );
+    }
+
+    function testAbortNeverFunded() public {
+        fundAlice();
+        vm.expectRevert(DLCAccount.NotFunded.selector);
+        account.verify(
+            BOB,
+            address(0),
+            0,
+            0,
+            uint8(ILatch.State.UNSET),
+            1.02 ether,
+            address(latch),
+            EVENT,
+            4
+        );
+    }
+
+    function testAbortNonCanonicalMsg() public {
+        fundAlice();
+        vm.expectRevert(DLCAccount.BadSigner.selector);
+        account.verify(
+            ALICE,
+            address(0),
+            1,
+            0,
+            uint8(ILatch.State.UNSET),
+            1.02 ether,
+            address(latch),
+            EVENT,
+            4
         );
     }
 
@@ -79,6 +115,8 @@ contract DLCAbortTest is TestBase {
         account.verify(
             ALICE,
             address(0),
+            0,
+            0,
             uint8(ILatch.State.UNSET),
             2.02 ether,
             address(latch),
@@ -93,6 +131,8 @@ contract DLCAbortTest is TestBase {
         account.verify(
             CAROL,
             address(0),
+            0,
+            0,
             uint8(ILatch.State.UNSET),
             1.02 ether,
             address(latch),
@@ -107,6 +147,8 @@ contract DLCAbortTest is TestBase {
         account.verify(
             ALICE,
             address(0),
+            0,
+            0,
             uint8(ILatch.State.UNSET),
             1 ether,
             address(latch),
@@ -130,6 +172,8 @@ contract DLCAbortTest is TestBase {
         account.verify(
             ALICE,
             BOB,
+            0,
+            0,
             uint8(ILatch.State.YES),
             2 ether,
             address(latch),
@@ -152,6 +196,8 @@ contract DLCAbortTest is TestBase {
         account.verify(
             ALICE,
             address(0),
+            0,
+            0,
             uint8(ILatch.State.UNSET),
             1.02 ether,
             address(latch),

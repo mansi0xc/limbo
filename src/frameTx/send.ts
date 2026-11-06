@@ -14,12 +14,28 @@ export async function sendRawFrameTx(tx: FrameTransaction): Promise<Hex> {
   return (await rpc(config.gatewayUrl, "eth_sendRawTransaction", [encodeRawFrameTx(tx)])) as Hex;
 }
 
+/** A frame receipt's gas can be a single quantity or an [execution, state] pair. */
+export type GasUsed = Hex | [Hex, Hex];
+
 export interface FrameReceipt {
   status: Hex;
   blockNumber: Hex;
-  gasUsed?: Hex;
-  frameReceipts?: { status: Hex; gasUsed?: Hex }[];
+  gasUsed?: GasUsed;
+  frameReceipts?: { status: Hex; gasUsed?: GasUsed }[];
   [key: string]: unknown;
+}
+
+export function frameGas(gasUsed: GasUsed | undefined): bigint {
+  if (!gasUsed) return 0n;
+  if (Array.isArray(gasUsed)) return BigInt(gasUsed[0]) + BigInt(gasUsed[1]);
+  return BigInt(gasUsed);
+}
+
+/** Validation gas is the expiry frame (0) plus the account's self_verify frame (1). */
+export function validationGas(receipt: FrameReceipt): bigint {
+  const frames = receipt.frameReceipts ?? [];
+  if (!frames.length) return frameGas(receipt.gasUsed);
+  return frames.slice(0, 2).reduce((sum, frame) => sum + frameGas(frame.gasUsed), 0n);
 }
 
 export async function waitForReceipt(hash: Hex): Promise<FrameReceipt> {

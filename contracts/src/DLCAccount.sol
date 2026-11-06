@@ -3,15 +3,15 @@ pragma solidity 0.8.28;
 
 import {HegotaSupport} from "@forshtat/hegota-support/contracts/HegotaSupport.sol";
 import {Devnet} from "@forshtat/hegota-support/contracts/Devnet.sol";
-import {Scope, SigParam, TxParam} from "@forshtat/hegota-support/contracts/Params.sol";
+import {Scope, SigParam} from "@forshtat/hegota-support/contracts/Params.sol";
 import {ILatch} from "./interfaces/ILatch.sol";
 import {IStakingRegistry} from "./interfaces/IStakingRegistry.sol";
 
 /// A 2-of-2 binary DLC account. All outcome cheques share one EIP-8250 key at sequence 0, so the
 /// first promoted value consumes the key and the siblings become invalid.
 ///
-/// The refund after EXPIRED uses the recorded deposits. If only one side funded, either party can
-/// sign an ABORT cheque alone; the abort also marks the account so later deposits are rejected.
+/// The refund after EXPIRED uses the recorded deposits. If only one side funded, that side can sign
+/// an ABORT cheque alone; the abort also marks the account so later deposits are rejected.
 contract DLCAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
     uint8 public constant ABORT_TAG = 4;
 
@@ -89,13 +89,21 @@ contract DLCAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
     fallback() external payable {
         (address latch_, bytes32 eventId_, uint8 expectedTag) = abi.decode(msg.data, (address, bytes32, uint8));
 
-        uint256 count = txparam(TxParam.SIGNATURE_COUNT);
         address signer0 = address(uint160(sigparam(0, SigParam.RESOLVED_SIGNER)));
-        address signer1 = count > 1 ? address(uint160(sigparam(1, SigParam.RESOLVED_SIGNER))) : address(0);
+        uint256 msg0 = sigparam(0, SigParam.MSG);
+
+        address signer1 = address(0);
+        uint256 msg1 = 0;
+        if (expectedTag != ABORT_TAG) {
+            signer1 = address(uint160(sigparam(1, SigParam.RESOLVED_SIGNER)));
+            msg1 = sigparam(1, SigParam.MSG);
+        }
 
         _verify(
             signer0,
             signer1,
+            msg0,
+            msg1,
             uint8(latch.state(eventId)),
             address(this).balance,
             latch_,
@@ -108,22 +116,27 @@ contract DLCAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP) {
     function _verify(
         address signer0,
         address signer1,
+        uint256 msg0,
+        uint256 msg1,
         uint8 latchState,
         uint256 balance,
         address latch_,
         bytes32 eventId_,
         uint8 expectedTag
     ) internal view {
+        if (msg0 != 0) revert BadSigner();
         if (latch_ != address(latch) || eventId_ != eventId) revert BadTrigger();
         if (aborted) revert AlreadyAborted();
 
         if (expectedTag == ABORT_TAG) {
             if (bothFunded) revert AlreadyFunded();
             if (signer0 != alice && signer0 != bob) revert BadSigner();
+            if (deposits[signer0] == 0) revert NotFunded();
             if (balance < deposits[alice] + deposits[bob] + gasBuffer) revert NoRoom();
             return;
         }
 
+        if (msg1 != 0) revert BadSigner();
         if (expectedTag < uint8(ILatch.State.YES) || expectedTag > uint8(ILatch.State.EXPIRED)) {
             revert BadTrigger();
         }
