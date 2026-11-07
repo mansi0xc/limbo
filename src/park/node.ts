@@ -3,6 +3,7 @@ import path from "node:path";
 import { isAddressEqual, type Address, type Hex } from "viem";
 import { config } from "../config.js";
 import { fromWire } from "../frameTx/wire.js";
+import { FRAME_MODE } from "../frameTx/types.js";
 import { readState } from "../state.js";
 import { validate } from "./admission.js";
 import { gossip } from "./gossip.js";
@@ -34,8 +35,25 @@ function view(entry: ParkedEntry) {
     error: entry.error,
     txId: entry.txId,
     attempts: entry.attempts,
+    nextAttemptAt: entry.nextAttemptAt,
+    nonceKey: entry.nonceKey.toString(),
+    nonceSeq: entry.nonceSeq.toString(),
+    payouts: (entry.tx.frames ?? [])
+      .filter((frame) => frame.mode === FRAME_MODE.SENDER && frame.value > 0n)
+      .map((frame) => ({ to: frame.target, value: frame.value.toString() })),
     receivedAt: entry.receivedAt,
   };
+}
+
+interface LatchView {
+  kind: string;
+  account: Address;
+  latch: Address;
+  eventId: Hex;
+  state: number | null;
+  deadline: string | null;
+  readAt: number | null;
+  error?: string;
 }
 
 /** A malformed request: answered with 400, not 500. */
@@ -59,9 +77,16 @@ async function readBody(req: http.IncomingMessage): Promise<any> {
   }
 }
 
-function send(res: http.ServerResponse, status: number, body: unknown): void {
+function send(res: http.ServerResponse, status: number, body: unknown, readOnly = false): void {
   const text = JSON.stringify(body);
-  res.writeHead(status, { "content-type": "application/json", "content-length": Buffer.byteLength(text) });
+  const headers: http.OutgoingHttpHeaders = {
+    "content-type": "application/json",
+    "content-length": Buffer.byteLength(text),
+  };
+  // The read-only endpoints may be read by the park explorer from another origin. POST /park stays
+  // same-origin: a browser cannot preflight it, so no web page can submit through a local node.
+  if (readOnly) headers["access-control-allow-origin"] = "*";
+  res.writeHead(status, headers);
   res.end(text);
 }
 
@@ -77,16 +102,50 @@ const indexer = new ParkIndexer(store, templates, chainReader, {
   fallbackAfterMs: config.fallbackPromoteMs,
 });
 
+/** The latch each template waits on, refreshed in the background for the explorer. */
+const latches = new Map<string, LatchView>(
+  templates.map((template) => [
+    template.kind,
+    {
+      kind: template.kind,
+      account: template.account,
+      latch: template.latch,
+      eventId: template.eventId,
+      state: null,
+      deadline: null,
+      readAt: null,
+    },
+  ])
+);
+
+async function refreshLatches(): Promise<void> {
+  for (const template of templates) {
+    const current = latches.get(template.kind)!;
+    try {
+      const [latchState, deadline] = await Promise.all([
+        chainReader.readLatchState(template.latch, template.eventId),
+        chainReader.readLatchDeadline(template.latch, template.eventId),
+      ]);
+      latches.set(template.kind, { ...current, state: latchState, deadline: deadline.toString(), readAt: Date.now(), error: undefined });
+    } catch (error) {
+      latches.set(template.kind, { ...current, error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     if (req.method === "GET" && req.url === "/health") {
-      return send(res, 200, { ok: true, role, port });
+      return send(res, 200, { ok: true, role, port }, true);
     }
 
     if (req.method === "GET" && req.url === "/status") {
       return send(res, 200, {
         role,
         peer,
+        now: Date.now(),
+        promotion: indexer.snapshot(),
+        latches: [...latches.values()],
         caps: { perTrigger: config.pCap, perEntity: config.eCap },
         entries: store.list().map(view),
         counts: {
@@ -95,7 +154,7 @@ const server = http.createServer(async (req, res) => {
           evicted: store.list("evicted").length,
           failed: store.list("failed").length,
         },
-      });
+      }, true);
     }
 
     if (req.method === "POST" && req.url === "/park") {
@@ -153,10 +212,15 @@ server.listen(port, "127.0.0.1", () => {
   console.log(`store: ${store.list().length} entries loaded from ${config.parkDir}`);
   if (role !== "a") console.log(`fallback promoter after ${config.fallbackPromoteMs}ms`);
   indexer.start();
+  void refreshLatches();
+  latchTimer = setInterval(() => void refreshLatches(), 2000);
 });
+
+let latchTimer: NodeJS.Timeout | undefined;
 
 function shutdown(): void {
   indexer.stop();
+  if (latchTimer) clearInterval(latchTimer);
   server.close(() => process.exit(0));
 }
 

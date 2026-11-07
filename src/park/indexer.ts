@@ -112,6 +112,15 @@ export class ParkIndexer {
     }
   }
 
+  /** What a dashboard needs to show the promotion policy: role, fallback delay, and settle times. */
+  snapshot(): { primary: boolean; fallbackAfterMs: number; settledAt: Record<string, number> } {
+    return {
+      primary: this.options.primary,
+      fallbackAfterMs: this.options.fallbackAfterMs,
+      settledAt: Object.fromEntries(this.settledAt),
+    };
+  }
+
   private parked(template: Template): ParkedEntry[] {
     return this.store.list("parked").filter((entry) => entry.kind === template.kind);
   }

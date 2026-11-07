@@ -21,7 +21,7 @@ const GROUPS: { title: string; cmds: Cmd[] }[] = [
     title: "# two park nodes, then the workloads",
     cmds: [
       { cmd: "yarn park:a", note: "promoter · terminal 1" },
-      { cmd: "yarn park:b", note: "peer, revalidates gossip · terminal 2" },
+      { cmd: "yarn park:b", note: "peer and fallback promoter · terminal 2" },
       { cmd: "yarn demo:deadman && yarn demo:dlc && yarn demo:cap", note: "rescue, DLC, and the P+1 cap" },
     ],
   },

@@ -132,6 +132,11 @@ yarn measure
 
 The exact commands and expected output are in [`docs/demo-runbook.md`](docs/demo-runbook.md).
 
+To watch the park area live, run the web app (`cd web && npm install && npm run dev`) and open
+`/explorer` while both nodes run. It reads each node's `GET /status` and shows the latch, every parked
+cheque on both nodes, evictions, landed transactions, and node B's fallback countdown. Stop node A after
+the latch settles to watch node B take over.
+
 ## Tests
 
 - `yarn test:contracts` — 68 Foundry tests for the latch, rescue account, DLC account, stakes and

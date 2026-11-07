@@ -13,6 +13,7 @@ const LINKS = [
   { href: "/#impact", label: "Who it’s for" },
   { href: "/docs", label: "Docs" },
   { href: "/playground", label: "Playground" },
+  { href: "/explorer", label: "Explorer" },
 ];
 
 export function Nav() {
