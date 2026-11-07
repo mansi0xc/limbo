@@ -389,7 +389,7 @@ function Offline() {
       </div>
       <pre>
         <code>
-          {`yarn deploy        # once, writes .trellis-state.json
+          {`yarn deploy        # once, writes .limbo-state.json
 yarn park:a        # primary · :8787
 yarn park:b        # fallback · :8788
 yarn demo:deadman  # or demo:dlc`}

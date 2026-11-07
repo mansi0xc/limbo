@@ -8,14 +8,14 @@ const GROUPS: { title: string; cmds: Cmd[] }[] = [
   {
     title: "# build and test",
     cmds: [
-      { cmd: "git clone https://github.com/mansi0xc/trellis-vc && cd trellis-vc", note: "Node 20.12+, Yarn 1.22, Foundry" },
+      { cmd: "git clone https://github.com/mansi0xc/limbo && cd limbo", note: "Node 20.12+, Yarn 1.22, Foundry" },
       { cmd: "yarn install --ignore-optional && yarn build:contracts", note: "compile the latch and accounts" },
       { cmd: "yarn test:contracts && yarn test", note: "Foundry and Vitest suites" },
     ],
   },
   {
     title: "# deploy to the devnet (chain 1337)",
-    cmds: [{ cmd: "TRELLIS_DEPLOYER_KEY=0x… yarn deploy", note: "stakes and funds both accounts" }],
+    cmds: [{ cmd: "LIMBO_DEPLOYER_KEY=0x… yarn deploy", note: "stakes and funds both accounts" }],
   },
   {
     title: "# two park nodes, then the workloads",
@@ -53,7 +53,7 @@ export function Terminal() {
   return (
     <div className="term">
       <div className="term__bar">
-        <span>trellis-vc</span>
+        <span>limbo</span>
         <span>devnet · chain 1337</span>
       </div>
       <div className="term__body">

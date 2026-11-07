@@ -206,7 +206,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(port, "127.0.0.1", () => {
-  console.log(`trellis park node ${role} listening on http://127.0.0.1:${port}`);
+  console.log(`limbo park node ${role} listening on http://127.0.0.1:${port}`);
   console.log(`templates: ${templates.map((template) => `${template.kind}=${template.account}`).join(", ")}`);
   if (peer) console.log(`gossip peer: ${peer}`);
   console.log(`store: ${store.list().length} entries loaded from ${config.parkDir}`);

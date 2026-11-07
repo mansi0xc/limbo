@@ -1,6 +1,6 @@
-# Trellis
+# Limbo
 
-Trellis is a reference implementation of **latch-triggered parked frame transactions** on the
+Limbo is a reference implementation of **latch-triggered parked frame transactions** on the
 EIP-8141 / ERC-8421 alt-mempool.
 
 Built for the EF Frame Transaction Alt Mempool track at ETHGlobal Mumbai 2026.
@@ -107,11 +107,11 @@ Deploy with a funded devnet key. The deploy script generates the other keys and 
 from the deployer:
 
 ```sh
-export TRELLIS_DEPLOYER_KEY=0x...
+export LIMBO_DEPLOYER_KEY=0x...
 yarn deploy
 ```
 
-The deployed addresses, generated keys, deadlines, and code hashes go into `.trellis-state.json`,
+The deployed addresses, generated keys, deadlines, and code hashes go into `.limbo-state.json`,
 which is git-ignored.
 
 Run the two park nodes in separate terminals:
@@ -193,6 +193,31 @@ docs/notes/                        early idea and build-plan notes, kept for his
   targets shared latches, nobody-online triggers, and sibling sets.
 - Gossip leaks the trigger and timing. The repo makes no privacy claim.
 - The implementation is devnet-only and unaudited.
+
+## CROPS
+
+Lead property: **censorship resistance**. A signed transaction lands when its trigger fires, with the
+signer offline and without any single operator's permission.
+
+- **C: Censorship resistance.** What I run that users depend on: the two reference park nodes. A node
+  can delay a transaction but never change it: the signed bytes and the account's on-chain check fix
+  the outcome. Node B promotes if node A hasn't within 30 seconds, and anyone holding the bytes (the
+  signer, the payee) can send them straight to an alt-mempool gateway. The DLC oracle can stall a bet
+  but not redirect it: if it never attests, anyone can expire the latch and the refund lands.
+- **O: Open source.** MIT, see [`LICENSE`](LICENSE). Contracts, park nodes, demos and the web app all
+  build and run from this repo alone, with public npm packages and a funded key on the public devnet.
+  No closed service is involved.
+- **P: Privacy.** This is not a privacy tool. A park node sees the full signed transaction (trigger,
+  payee, amount) from the moment it is parked, its `/status` endpoint lists it to anyone who can
+  reach the node (nodes bind to `127.0.0.1` by default), and gossip shares it with the peer node. The
+  RPC gateway sees the node's latch and stake reads and the promoted transaction. The web app has no
+  analytics or trackers, self-hosts its fonts at build time, talks only to the park nodes it is
+  pointed at, and stores nothing but the colour theme in `localStorage`.
+- **S: Security.** Keys never leave the signer: cheques are signed locally and nodes receive only
+  signed bytes they cannot modify. The demo scripts generate throwaway devnet keys into the
+  git-ignored `.limbo-state.json`; never reuse it for real funds. Trust assumptions: the latch
+  contract, the DLC oracle, the staking registry and the devnet itself. The contracts are tested,
+  including the griefing cases found in review, but unaudited.
 
 ## Devnet
 

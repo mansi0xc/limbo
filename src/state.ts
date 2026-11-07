@@ -3,7 +3,7 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import type { Address, Hex } from "viem";
 import { config } from "./config.js";
 
-export interface TrellisState {
+export interface LimboState {
   deployerKey?: Hex;
   ownerKey?: Hex;
   aliceKey?: Hex;
@@ -52,7 +52,7 @@ export interface TrellisState {
 
 export type KeyName = "deployer" | "owner" | "alice" | "bob" | "oracle" | "beneficiary";
 
-const KEY_FIELD: Record<KeyName, keyof TrellisState> = {
+const KEY_FIELD: Record<KeyName, keyof LimboState> = {
   deployer: "deployerKey",
   owner: "ownerKey",
   alice: "aliceKey",
@@ -61,7 +61,7 @@ const KEY_FIELD: Record<KeyName, keyof TrellisState> = {
   beneficiary: "beneficiaryKey",
 };
 
-const ADDRESS_FIELD: Record<KeyName, keyof TrellisState> = {
+const ADDRESS_FIELD: Record<KeyName, keyof LimboState> = {
   deployer: "deployer",
   owner: "owner",
   alice: "alice",
@@ -70,15 +70,15 @@ const ADDRESS_FIELD: Record<KeyName, keyof TrellisState> = {
   beneficiary: "beneficiary",
 };
 
-export function readState(): TrellisState {
+export function readState(): LimboState {
   try {
-    return JSON.parse(fs.readFileSync(config.stateFile, "utf8")) as TrellisState;
+    return JSON.parse(fs.readFileSync(config.stateFile, "utf8")) as LimboState;
   } catch {
     return {};
   }
 }
 
-export function writeState(patch: Partial<TrellisState>): void {
+export function writeState(patch: Partial<LimboState>): void {
   fs.writeFileSync(config.stateFile, JSON.stringify({ ...readState(), ...patch }, null, 2) + "\n");
 }
 
@@ -87,10 +87,10 @@ export function ensureKey(name: KeyName): Hex {
   const existing = readState()[field] as Hex | undefined;
   if (existing) return existing;
 
-  const env = name === "deployer" ? (process.env.TRELLIS_DEPLOYER_KEY as Hex | undefined) : undefined;
+  const env = name === "deployer" ? (process.env.LIMBO_DEPLOYER_KEY as Hex | undefined) : undefined;
   const key = env ?? generatePrivateKey();
   const address = privateKeyToAccount(key).address;
-  writeState({ [field]: key, [ADDRESS_FIELD[name]]: address } as Partial<TrellisState>);
+  writeState({ [field]: key, [ADDRESS_FIELD[name]]: address } as Partial<LimboState>);
   return key;
 }
 
@@ -98,8 +98,8 @@ export function addressOf(key: Hex): Address {
   return privateKeyToAccount(key).address;
 }
 
-export function requireState<K extends keyof TrellisState>(key: K): NonNullable<TrellisState[K]> {
+export function requireState<K extends keyof LimboState>(key: K): NonNullable<LimboState[K]> {
   const value = readState()[key];
   if (value == null) throw new Error(`missing ${String(key)} in ${config.stateFile}; run yarn deploy`);
-  return value as NonNullable<TrellisState[K]>;
+  return value as NonNullable<LimboState[K]>;
 }

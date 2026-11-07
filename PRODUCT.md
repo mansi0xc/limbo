@@ -17,7 +17,7 @@ Next.js (App Router) + TypeScript, in `web/` at the repo root. Chosen by the use
 
 ## Product Purpose
 
-Trellis is a reference implementation of latch-triggered parked frame transactions on the EIP-8141 / ERC-8421 alt-mempool. A fully signed transaction waits ("parks") in a park node until an on-chain latch changes state, then the node promotes the unchanged bytes to the mempool. Success: a reader understands that a signed transaction can land later, on a condition, with nobody online and no keeper re-signing.
+Limbo is a reference implementation of latch-triggered parked frame transactions on the EIP-8141 / ERC-8421 alt-mempool. A fully signed transaction waits ("parks") in a park node until an on-chain latch changes state, then the node promotes the unchanged bytes to the mempool. Success: a reader understands that a signed transaction can land later, on a condition, with nobody online and no keeper re-signing.
 
 ## Positioning
 
@@ -31,7 +31,7 @@ PARK is a node policy, not a consensus change. The trigger is signed inside the 
 - Two reference park nodes (A promotes, B revalidates via gossip), per-trigger cap P and per-entity cap E.
 - Public devnet chain 1337, gateway `altmempoolgateway.forshtat.com/rpc`, explorer `explorer.altmempool.wtf`.
 - Commands: `yarn deploy`, `yarn park:a`, `yarn park:b`, `yarn demo:deadman`, `yarn demo:dlc`, `yarn demo:cap`, `yarn measure`.
-- Repo: github.com/mansi0xc/trellis-vc.
+- Repo: github.com/mansi0xc/limbo.
 
 ## Capabilities and Constraints
 
@@ -42,7 +42,7 @@ PARK is a node policy, not a consensus change. The trigger is signed inside the 
 
 ## Brand Commitments
 
-Name: Trellis. Rule name: PARK. Voice from the README: plain, exact, honest about limits. Avoid generic crypto aesthetics and hype copy (user, explicit).
+Name: Limbo. Rule name: PARK. Voice from the README: plain, exact, honest about limits. Avoid generic crypto aesthetics and hype copy (user, explicit).
 
 Standing preference (user, 2026-11-07): the category-standard path in a research-paper flavor (Paradigm / Flashbots craft level), light paper ground, serif headlines, ruled mechanism diagrams, but punchy copy rather than an essay tone. Shaders (shaders.com library) are wanted as tasteful, non-gimmicky moments.
 

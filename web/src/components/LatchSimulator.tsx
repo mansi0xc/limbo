@@ -348,7 +348,7 @@ function Dlc() {
           <h3 className="col__title" style={{ marginBottom: 0 }}>
             Latch <span>write-once</span>
           </h3>
-          <LatchFace label="trellis:dlc · oracle-attested" state={latch} />
+          <LatchFace label="limbo:dlc · oracle-attested" state={latch} />
           <div className="actions">
             <button className="act act--hot" disabled={latch !== 0} onClick={() => flip(1)}>
               Oracle attests YES <small>attest(true)</small>
@@ -485,7 +485,7 @@ function Deadman() {
           <h3 className="col__title" style={{ marginBottom: 0 }}>
             Latch <span>heartbeat</span>
           </h3>
-          <LatchFace label="trellis:rescue · owner pings" state={latch}>
+          <LatchFace label="limbo:rescue · owner pings" state={latch}>
             <div className="beat">
               <div className="beat__bar">
                 <motion.div

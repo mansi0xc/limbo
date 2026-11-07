@@ -1,11 +1,11 @@
 import type { Address, Hex } from "viem";
 import { config } from "../config.js";
-import type { TrellisState } from "../state.js";
+import type { LimboState } from "../state.js";
 import type { Template } from "./types.js";
 
-export function templatesFromState(state: TrellisState): Template[] {
+export function templatesFromState(state: LimboState): Template[] {
   const required = (value: string | undefined, name: string): string => {
-    if (!value) throw new Error(`missing ${name} in .trellis-state.json; run yarn deploy`);
+    if (!value) throw new Error(`missing ${name} in .limbo-state.json; run yarn deploy`);
     return value;
   };
 

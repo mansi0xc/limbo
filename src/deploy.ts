@@ -47,7 +47,7 @@ async function main(): Promise<void> {
   console.log(`deployer ${deployer}: ${formatEther(balance)} ETH`);
   if (balance < 100_000_000_000_000_000n) {
     throw new Error(
-      `deployer ${deployer} has ${formatEther(balance)} ETH; fund it or set TRELLIS_DEPLOYER_KEY to a funded devnet key`
+      `deployer ${deployer} has ${formatEther(balance)} ETH; fund it or set LIMBO_DEPLOYER_KEY to a funded devnet key`
     );
   }
 
@@ -57,8 +57,8 @@ async function main(): Promise<void> {
   // The oracle sends the attest transaction in demo:dlc, so it needs gas money.
   await fund(deployerKey, oracle, 10_000_000_000_000_000n);
 
-  const rescueEventId = keccak256(toBytes("trellis:rescue"));
-  const dlcEventId = keccak256(toBytes("trellis:dlc"));
+  const rescueEventId = keccak256(toBytes("limbo:rescue"));
+  const dlcEventId = keccak256(toBytes("limbo:dlc"));
 
   console.log("deploying the rescue latch and account...");
   const rescueLatch = await deployContract(
@@ -202,7 +202,7 @@ async function main(): Promise<void> {
   if (!(await readBothFunded(dlcAccount))) throw new Error("DLC is not funded on both sides");
 
   console.log("");
-  console.log("trellis is ready");
+  console.log("limbo is ready");
   console.log(`  rescue latch   ${rescueLatch}`);
   console.log(`  rescue account ${rescueAccount} (staked ${formatEther(rescueStake.amount)} ETH)`);
   console.log(`  rescue expiry  ${rescueExpiry}`);

@@ -1,7 +1,8 @@
 {
-  "name": "trellis",
+  "name": "limbo",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "description": "Latch-triggered parked frame transactions for the EIP-8141 alt-mempool",
   "engines": {

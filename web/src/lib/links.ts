@@ -1,4 +1,4 @@
-export const REPO = "https://github.com/mansi0xc/trellis-vc";
+export const REPO = "https://github.com/mansi0xc/limbo";
 export const RULE_DOC = `${REPO}/blob/main/docs/park-rule.md`;
 export const RUNBOOK = `${REPO}/blob/main/docs/demo-runbook.md`;
 export const README = `${REPO}#readme`;

@@ -2,12 +2,12 @@
 
 **Status:** v2 draft for discussion, **not implemented**. Not a consensus change.
 **Scope:** ERC-8421 alternative-mempool nodes handling EIP-8141 frame transactions.
-**What Trellis implements:** [`park-rule.md`](park-rule.md) (PARK-010…080). This draft is where the
+**What Limbo implements:** [`park-rule.md`](park-rule.md) (PARK-010…080). This draft is where the
 rule goes next; the gaps are listed below so nobody reads it as a description of the code.
 
 > **Implemented vs this draft**
 >
-> | This draft | Trellis today |
+> | This draft | Limbo today |
 > |---|---|
 > | Interface-based admission (`ILatchTriggered`, `tagOf`) | Allow-listed templates: exact account address + code hash per deploy |
 > | Caps ranked by `(entity_stake, age)`; incumbents can be ranked out | First-come live caps (`P=4` per trigger, `E=8` per entity) |

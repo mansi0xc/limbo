@@ -10,7 +10,7 @@ export const config = {
   stakingRegistry: "0xd51c04d7a0b01124e84de152f4e56d9eecb22d2f" as Address,
   expiryVerifier: "0x0000000000000000000000000000000000008141" as Address,
 
-  stateFile: path.resolve(".trellis-state.json"),
+  stateFile: path.resolve(".limbo-state.json"),
 
   stake: parseEther("0.012"),
   unstakeDelay: 86400,

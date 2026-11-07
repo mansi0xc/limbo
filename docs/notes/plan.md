@@ -122,11 +122,11 @@ Each checkpoint is a reviewable commit. The maintainer commits; the automation d
 
 ### M0 — project docs
 
-`docs: add Trellis idea and build plan` — `idea.md`, `plan.md`.
+`docs: add Limbo idea and build plan` — `idea.md`, `plan.md`.
 
 ### M1 — scaffold
 
-`chore: scaffold trellis package, foundry, and devnet config` — `package.json`, `yarn.lock`,
+`chore: scaffold limbo package, foundry, and devnet config` — `package.json`, `yarn.lock`,
 `tsconfig.json`, `foundry.toml`, `.gitignore`, `scripts/export-artifacts.mjs`, `src/config.ts`,
 `src/state.ts`, `src/rpc.ts`, `src/chain.ts`, `src/contracts.ts`, `src/frameTx/`.
 

@@ -3,7 +3,7 @@ contracts/out/
 contracts/artifacts/
 cache/
 .env
-.trellis-state.json
+.limbo-state.json
 .park/
 dist/
 *.log

@@ -68,7 +68,7 @@ describe("ParkStore", () => {
   });
 
   it("persists entries with bigints and reloads the indexes", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-store-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "limbo-store-"));
     const file = path.join(dir, "a.json");
     const first = new ParkStore({ file });
     first.add(entry("a", 3, 1n));

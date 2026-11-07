@@ -1,9 +1,9 @@
 > **Early idea notes, kept for history.** Not a description of the current code; see the
 > [README](../../README.md) and [`docs/park-rule.md`](../park-rule.md).
 
-# Trellis
+# Limbo
 
-Trellis is a reference implementation of **PARK**, a node policy that adds a **parked** state to the
+Limbo is a reference implementation of **PARK**, a node policy that adds a **parked** state to the
 EIP-8141 / ERC-8421 alt-mempool: a signed frame transaction waits until a write-once latch changes,
 then the matching bytes are promoted. The rule is the product; the deadman rescue and the binary DLC
 are the two proofs.
@@ -250,7 +250,7 @@ yarn demo:cap
 yarn measure
 ```
 
-`yarn deploy` needs a funded devnet key in `TRELLIS_DEPLOYER_KEY`. The exact commands, the devnet
+`yarn deploy` needs a funded devnet key in `LIMBO_DEPLOYER_KEY`. The exact commands, the devnet
 health check, and the recovery steps are in `docs/demo-runbook.md`.
 
 The demo prints the latch address, the parked entries, the promotion, the admission result, the

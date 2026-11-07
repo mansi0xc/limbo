@@ -29,12 +29,12 @@ Use a funded devnet key. The deploy script creates the owner, Alice, Bob, oracle
 keys and funds them from the deployer.
 
 ```sh
-export TRELLIS_DEPLOYER_KEY=0x...
+export LIMBO_DEPLOYER_KEY=0x...
 yarn deploy
 ```
 
 Expected output includes the rescue latch, rescue account, DLC latch, DLC account, stake balances,
-and both expiry values. The state is written to `.trellis-state.json` (git-ignored).
+and both expiry values. The state is written to `.limbo-state.json` (git-ignored).
 
 If the deploy reports `transaction ... was not mined within 180s`, check step 0. The transaction is
 still in the pool; the deploy can be re-run when the devnet advances. The keys in the state are
@@ -115,7 +115,7 @@ yarn measure
 ```
 
 Run it after `demo:deadman` and `demo:dlc`. The script calls `ethrex_simulateFrameTransaction` on the
-root URL, then reads what the demos recorded in `.trellis-state.json` and the promoted receipts. It
+root URL, then reads what the demos recorded in `.limbo-state.json` and the promoted receipts. It
 prints a Markdown table, one row per workload:
 
 - the live mempool's verdict on the cheque before the trigger (recorded by the demo);
@@ -144,5 +144,5 @@ the table into the submission as-is.
 
 ## Reset
 
-Stop the nodes, delete `.trellis-state.json` and `.park/`, and re-run `yarn deploy`. The next deploy creates a new
+Stop the nodes, delete `.limbo-state.json` and `.park/`, and re-run `yarn deploy`. The next deploy creates a new
 rescue account, DLC account, and latch set. The old devnet contracts remain; they are not reused.
