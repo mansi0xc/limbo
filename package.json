@@ -11,6 +11,7 @@
   "scripts": {
     "build:contracts": "forge build && node scripts/export-artifacts.mjs",
     "test:contracts": "forge test",
+    "predeploy": "yarn build:contracts",
     "deploy": "tsx src/deploy.ts",
     "sign": "tsx src/sign.ts",
     "park:a": "tsx src/park/node.ts --config a",
