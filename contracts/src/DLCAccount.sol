@@ -11,8 +11,9 @@ import {FrameIntrospection} from "./lib/FrameIntrospection.sol";
 /// A 2-of-2 binary DLC account. All outcome cheques share one EIP-8250 key at sequence 0, so the
 /// first promoted value consumes the key and the siblings become invalid.
 ///
-/// Each side has a required stake. The DLC counts as funded only once both stakes are met, so a dust
-/// deposit cannot flip the account into "funded" and block the abort path.
+/// Each side has a required stake. A side can deposit up to its stake and no more, so nothing is stranded
+/// behind the fixed-amount outcome and refund cheques. The DLC counts as funded only once both stakes are
+/// met, so a dust deposit cannot flip the account into "funded" and block the abort path.
 ///
 /// If only one side met its stake, that side can sign an ABORT cheque alone. The ABORT cheque must
 /// call `markAborted` on the account and may not do anything else as the account: every SENDER frame
@@ -85,6 +86,8 @@ contract DLCAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP), FrameIntrospectio
         if (aborted) revert AlreadyAborted();
         require(latch.state(eventId) == ILatch.State.UNSET, "settled");
         require(msg.value > 0, "zero");
+        uint256 cap = msg.sender == alice ? stakeA : stakeB;
+        require(deposits[msg.sender] + msg.value <= cap, "over stake");
         deposits[msg.sender] += msg.value;
         bothFunded = deposits[alice] >= stakeA && deposits[bob] >= stakeB;
     }
@@ -122,7 +125,7 @@ contract DLCAccount is HegotaSupport(Devnet.ERC8421_WORKSHOP), FrameIntrospectio
         uint256 msg1 = 0;
         bool abortShape = false;
         if (expectedTag == ABORT_TAG) {
-            SenderFrames memory frames = _senderFrames(this.markAborted.selector);
+            SenderFrames memory frames = _senderFrames(this.markAborted.selector, address(0));
             abortShape = frames.hasMark && frames.onlySelfCalls;
         } else {
             signer1 = address(uint160(sigparam(1, SigParam.RESOLVED_SIGNER)));

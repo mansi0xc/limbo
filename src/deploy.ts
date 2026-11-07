@@ -69,7 +69,7 @@ async function main(): Promise<void> {
   );
   const rescueAccount = await deployContract(
     "RescueAccount",
-    [owner, beneficiary, rescueLatch, rescueEventId, config.rescue.amount, config.rescue.gasBuffer, config.stakingRegistry],
+    [owner, beneficiary, rescueLatch, rescueEventId, config.rescue.amount, config.rescue.gasBuffer, config.stakingRegistry, config.rescue.window],
     config.rescue.amount + config.rescue.gasBuffer,
     deployerKey
   );

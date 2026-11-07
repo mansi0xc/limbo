@@ -14,8 +14,9 @@ contract RescueAccountHarness is RescueAccount {
         bytes32 eventId_,
         uint256 rescueAmount_,
         uint256 gasBuffer_,
-        address stakingRegistry_
-    ) RescueAccount(owner_, beneficiary_, latch_, eventId_, rescueAmount_, gasBuffer_, stakingRegistry_) {}
+        address stakingRegistry_,
+        uint256 rescueWindow_
+    ) RescueAccount(owner_, beneficiary_, latch_, eventId_, rescueAmount_, gasBuffer_, stakingRegistry_, rescueWindow_) {}
 
     function verify(
         address signer,
@@ -26,14 +27,28 @@ contract RescueAccountHarness is RescueAccount {
         bytes32 eventId_,
         uint8 expectedTag
     ) external view {
-        _verify(signer, msg0, latchState, balance, latch_, eventId_, expectedTag, true);
+        _verify(signer, msg0, latchState, balance, latch_, eventId_, expectedTag, true, true);
     }
 
     function verifyMark(uint8 latchState, uint256 balance, address latch_, bytes32 eventId_, bool hasMark)
         external
         view
     {
-        _verify(owner, 0, latchState, balance, latch_, eventId_, uint8(ILatch.State.EXPIRED), hasMark);
+        _verify(owner, 0, latchState, balance, latch_, eventId_, uint8(ILatch.State.EXPIRED), hasMark, true);
+    }
+
+    function verifyPayout(bool paysBeneficiary) external view {
+        _verify(
+            owner,
+            0,
+            uint8(ILatch.State.EXPIRED),
+            1 ether,
+            address(latch),
+            eventId,
+            uint8(ILatch.State.EXPIRED),
+            true,
+            paysBeneficiary
+        );
     }
 }
 
@@ -45,6 +60,7 @@ contract RescueAccountTest is TestBase {
     address internal constant BENEFICIARY = address(0xB0B);
     address internal constant OTHER = address(0xCAFE);
     bytes32 internal constant EVENT = keccak256("rescue");
+    uint256 internal constant WINDOW = 3_700;
 
     function setUp() public {
         latch = new Latch(OWNER, address(0), 100, 10);
@@ -55,7 +71,8 @@ contract RescueAccountTest is TestBase {
             EVENT,
             0.1 ether,
             0.01 ether,
-            address(0x1234)
+            address(0x1234),
+            WINDOW
         );
         vm.warp(1000);
     }
@@ -161,7 +178,7 @@ contract RescueAccountTest is TestBase {
     function testWithdrawAfterAttest() public {
         Latch fixedLatch = new Latch(OWNER, address(0x0B0B), 0, 10);
         RescueAccountHarness other = new RescueAccountHarness(
-            OWNER, BENEFICIARY, fixedLatch, EVENT, 0.1 ether, 0.01 ether, address(0x1234)
+            OWNER, BENEFICIARY, fixedLatch, EVENT, 0.1 ether, 0.01 ether, address(0x1234), WINDOW
         );
         vm.prank(OWNER);
         fixedLatch.open(EVENT, 2000);
@@ -170,6 +187,34 @@ contract RescueAccountTest is TestBase {
         vm.deal(address(other), 1 ether);
         vm.prank(OWNER);
         other.withdraw();
+        assertEq(OWNER.balance, 1 ether);
+    }
+
+    /// A rescue that marks itself paid but does not pay the beneficiary is refused.
+    function testRescueWithoutPayoutRejected() public {
+        vm.expectRevert(RescueAccount.BadPayout.selector);
+        account.verifyPayout(false);
+    }
+
+    /// A rescue that never lands releases the funds once the window after the deadline has passed.
+    function testWithdrawAfterRescueWindow() public {
+        vm.prank(OWNER);
+        latch.ping(EVENT); // deadline 1100
+        vm.warp(1111);
+        latch.expire(EVENT);
+        vm.deal(address(account), 1 ether);
+
+        vm.warp(1100 + WINDOW);
+        assertTrue(account.rescuePending());
+        vm.startPrank(OWNER);
+        vm.expectRevert(RescueAccount.RescuePending.selector);
+        account.withdraw();
+        vm.stopPrank();
+
+        vm.warp(1100 + WINDOW + 1);
+        assertTrue(!account.rescuePending());
+        vm.prank(OWNER);
+        account.withdraw();
         assertEq(OWNER.balance, 1 ether);
     }
 }

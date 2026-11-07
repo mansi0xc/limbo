@@ -10,6 +10,7 @@ interface Vm {
     function deal(address, uint256) external;
     function expectRevert(bytes4) external;
     function expectRevert(bytes calldata) external;
+    function mockCall(address, bytes calldata, bytes calldata) external;
 }
 
 abstract contract TestBase {

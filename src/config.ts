@@ -36,6 +36,12 @@ export const config = {
     gasBuffer: parseEther("0.002"),
     interval: 60n,
     grace: 10n,
+    /**
+     * How long after the latch deadline the balance stays reserved for the rescue. It covers the grace
+     * period plus the cheque expiry (`chequeExpirySeconds`) plus a margin, so the owner can withdraw only
+     * once every parked rescue cheque is dead.
+     */
+    window: 10n + 3600n + 300n,
   },
 
   dlc: {

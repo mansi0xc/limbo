@@ -190,4 +190,18 @@ contract DLCAccountTest is TestBase {
         vm.expectRevert(bytes("payouts exceed stakes"));
         new DLCAccountHarness(ALICE, BOB, latch, EVENT, 1 ether, 1 ether, 1.5 ether, 0.6 ether, 0.02 ether, address(0x1234));
     }
+
+    /// A side cannot deposit more than its stake, so no excess is stranded behind the fixed-amount cheques.
+    function testDepositCappedAtStake() public {
+        vm.deal(ALICE, 10 ether);
+        vm.startPrank(ALICE);
+        vm.expectRevert(bytes("over stake"));
+        account.deposit{value: 1 ether + 1}();
+        account.deposit{value: 0.6 ether}();
+        vm.expectRevert(bytes("over stake"));
+        account.deposit{value: 0.5 ether}();
+        account.deposit{value: 0.4 ether}();
+        vm.stopPrank();
+        assertEq(account.deposits(ALICE), 1 ether);
+    }
 }

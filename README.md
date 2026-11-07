@@ -86,7 +86,9 @@ by frame introspection), then each party claims its own deposit back.
 The `self_verify` frame targets the staked account. Its data is the signed trigger. The account
 reads the shared latch, checks its signers and tag, checks the payout room, and approves execution
 and payment. For the rescue and the abort it also reads the transaction's own frames and requires a
-`markRescued` / `markAborted` self-call, so the signer cannot leave the state change out. The two park nodes independently admit and revalidate the same signed bytes. The
+`markRescued` / `markAborted` self-call, so the signer cannot leave the state change out. The rescue must
+also pay the beneficiary at least the rescue amount and send value nowhere else; the abort may send value
+nowhere at all. The two park nodes independently admit and revalidate the same signed bytes. The
 promoter sends the parked bytes unchanged to the alt-mempool gateway.
 
 ## Quick start
@@ -132,8 +134,10 @@ The exact commands and expected output are in [`docs/demo-runbook.md`](docs/demo
 
 ## Tests
 
-- `yarn test:contracts` — 60 Foundry tests for the latch, rescue account, DLC account, stakes,
-  refunds, and the abort and claim path.
+- `yarn test:contracts` — 68 Foundry tests for the latch, rescue account, DLC account, stakes and
+  deposit caps, refunds, the abort and claim path, the rescue payout and window, and the frame
+  introspection loop (opcode helpers mocked, since Foundry has no frame opcodes; the opcodes themselves
+  are only exercised on the devnet).
 - `yarn test` — 23 Vitest tests for admission, signatures, duplicates, caps, the store and its
   persistence, sibling groups, retries, and the fallback promoter.
 - `yarn typecheck` — strict TypeScript.
@@ -164,8 +168,11 @@ docs/notes/                        early idea and build-plan notes, kept for his
   current heartbeat deadline, so an owner who keeps pinging past that hour must re-sign and re-park the
   rescue (or sign with a longer expiry). A cheque that expires while the owner is still pinging does
   nothing.
-- The rescue account's funds are locked only while a rescue is pending (latch `EXPIRED`, rescue not
-  landed). In every other state the owner can withdraw, including the leftover after the rescue.
+- The rescue account's funds are locked only while a rescue is pending: latch `EXPIRED`, rescue not
+  landed, and the rescue window (grace + cheque expiry + margin after the deadline) still open. In every
+  other state the owner can withdraw, including the leftover after the rescue, and a rescue that never
+  lands releases the funds when the window closes.
+- Each DLC side can deposit up to its stake and no more.
 - Stake recovery: the accounts hold their registry stake under their own address; getting it back needs
   a signed cheque whose SENDER frame calls the registry.
 - Park nodes persist their park area to `.park/` and reload it on start. Node A promotes; node B
