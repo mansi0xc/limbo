@@ -1,3 +1,4 @@
+import { createInterface } from "node:readline/promises";
 import { encodeFunctionData } from "viem";
 import { config } from "../config.js";
 import { loadArtifact } from "../contracts.js";
@@ -7,7 +8,21 @@ import { buildRescue, park, waitForPromotion } from "../sign.js";
 import { getBalance, sendAndWait } from "../chain.js";
 import { readState, requireState, writeState } from "../state.js";
 
+/** `--pause`: wait for Enter before expiring the latch, e.g. to stop node A on camera first. */
+const PAUSE = process.argv.includes("--pause");
+
+async function waitForEnter(prompt: string): Promise<void> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    await rl.question(prompt);
+  } finally {
+    rl.close();
+  }
+}
+
 async function main(): Promise<void> {
+  // Drop the previous run's promotion so waitForPromotion can't return a stale hash after a redeploy.
+  writeState({ rescueTxHash: undefined, rescueIncludedBlock: undefined, rescueGas: undefined });
   const state = readState();
   const checkout = await buildRescue();
   const beneficiary = requireState("beneficiary");
@@ -39,6 +54,10 @@ async function main(): Promise<void> {
   if (waitSeconds > 0) {
     console.log(`3. owner is offline; waiting ${waitSeconds}s for the grace window`);
     await sleep(waitSeconds * 1000);
+  }
+
+  if (PAUSE) {
+    await waitForEnter("   paused: the latch can be expired now. Press Enter to expire it... ");
   }
 
   console.log("4. anyone expires the latch");

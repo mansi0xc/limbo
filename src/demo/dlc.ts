@@ -7,6 +7,8 @@ import { buildDlc, nodeStatus, park, waitForPromotion } from "../sign.js";
 import { readState, requireState, writeState } from "../state.js";
 
 async function main(): Promise<void> {
+  // Drop the previous run's promotion so waitForPromotion can't return a stale hash after a redeploy.
+  writeState({ dlcTxHash: undefined, dlcIncludedBlock: undefined, dlcGas: undefined });
   const checkout = await buildDlc();
   const bob = requireState("bob");
   const before = await getBalance(bob);
