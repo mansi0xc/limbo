@@ -7,3 +7,8 @@ cache/
 .park/
 dist/
 *.log
+
+# impeccable working files
+.impeccable/mocks/
+.impeccable/review/
+.impeccable/build/
